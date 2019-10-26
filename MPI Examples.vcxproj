@@ -65,9 +65,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="project\src\main.cpp" />
+    <ClCompile Include="project\src\Matr.cpp" />
     <ClCompile Include="project\src\mpiExample.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="project\include\Matr.h" />
     <ClInclude Include="project\include\mpiExample.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
