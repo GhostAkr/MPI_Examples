@@ -9,7 +9,7 @@ double** createMatr(int _rows, int _cols) {
 	for (int i = 0; i < _rows; ++i) {
 		result[i] = new double[_cols];
 		for (int j = 0; j < _cols; ++j) {
-			result[i][j] = 0.0;
+			result[i][j] = i + j;
 		}
 	}
 	return result;
@@ -44,7 +44,7 @@ double** matrixMult(double** _source1, double** _source2, int m, int n, int s) {
 
 // Staff things
 
-void printMatr(double** _mesh, int _rows, int _cols) {
+void printMatr(double** _mesh, int _rows, int _cols) {  // TODO: rename source matrix
 	for (int i = 0; i < _rows; ++i) {
 		for (int j = 0; j < _cols; ++j) {
 			cout << _mesh[i][j] << " ";
