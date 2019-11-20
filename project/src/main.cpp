@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../include/mpiExample.h"
+#include "../include/mpiProduction.h"
 
 using namespace std;
 
