@@ -60,6 +60,23 @@ double** matrixBlockMult(double** _A, double** _B, int _m, int _n, int _s) {
 	return result;
 }
 
+double** matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, int nOfCores){
+	int nOfCores = 4;  // In parallel version it's an argument
+	int nOfLines = nOfCores / 2;
+	int nOfCols = 2;
+	int height = _m / nOfLines;
+	int width = _s / nOfCols;
+	int counts[4] = {1,1,1,1};
+	int displs[4] = {1,1,1,1};
+	double* result = new double[_m*_s];
+	int rank = 0;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0){
+		//MPI_Scatterv(_A, counts, displs, MPI_DOUBLE, temp, counts, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	}
+	MPI_Gatherv()
+}
+
 // Additional methods
 
 bool compareMatrices(double** _source1, int m1, int n1, double** _source2, int m2, int n2) {

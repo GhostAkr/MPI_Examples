@@ -24,7 +24,7 @@ double** BLine(double** _B, int _nOfCols, int _nOfLines, int _j, int _width);  /
 // Block production
 
 double** matrixBlockMult(double** _A, double** _B, int _m, int _n, int _s);  // _A[m x n] * _B[n x s]
-double** matrixBlockMultParal(double** _A, double** _B, int _m, int _n, int _s, int nOfCores);
+double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, int nOfCores);
 
 // Additional methods
 
