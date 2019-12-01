@@ -20,11 +20,14 @@
 */
 double** ALine(double** _A, int _nOfLines, int _nOfCols, int _i, int _height);  // _i --- number of line (count from 1); _A[_nOfLines x _nOfCols]
 double** BLine(double** _B, int _nOfCols, int _nOfLines, int _j, int _width);  // _j --- number of column (count from 1); _B[_nOfLines x _nOfCols]
+// For line-view matrices
+double* ALine(double* _A, int _nOfLines, int _nOfCols, int _i, int _height);
+double* BLine(double* _B, int _nOfCols, int _nOfLines, int _j, int _width);
 
 // Block production
 
 double** matrixBlockMult(double** _A, double** _B, int _m, int _n, int _s);  // _A[m x n] * _B[n x s]
-double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, int nOfCores);
+double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, const int nOfCores);
 
 // Additional methods
 

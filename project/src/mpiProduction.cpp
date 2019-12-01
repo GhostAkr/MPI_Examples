@@ -31,6 +31,30 @@ double** BLine(double** _B, int _nOfCols, int _nOfLines, int _j, int _width) {
 	return result;
 }
 
+double* ALine(double* _A, int _nOfLines, int _nOfCols, int _i, int _height) {
+	int rows = _height;
+	int cols = _nOfCols;
+	double* result = new double[rows * cols];
+	for (int i = 0; i < rows; ++i) {
+		for (int j = 0; j < cols; ++j) {
+			result[i * cols + j] = _A[((_i - 1) * _height + i) * _nOfCols + j];
+		}
+	}
+	return result;
+}
+
+double* BLine(double* _B, int _nOfCols, int _nOfLines, int _j, int _width) {
+	int rows = _nOfLines;
+	int cols = _width;
+	double* result = new double[rows * cols];
+	for (int i = 0; i < rows; ++i) {
+		for (int j = 0; j < cols; ++j) {
+			result[i * cols + j] = _B[i * _nOfCols + ((_j - 1) * _width + j)];
+		}
+	}
+	return result;
+}
+
 // Block production
 
 double** matrixBlockMult(double** _A, double** _B, int _m, int _n, int _s) {
@@ -60,21 +84,29 @@ double** matrixBlockMult(double** _A, double** _B, int _m, int _n, int _s) {
 	return result;
 }
 
-double** matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, int nOfCores){
-	int nOfCores = 4;  // In parallel version it's an argument
-	int nOfLines = nOfCores / 2;
+double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, const int nOfCores){
 	int nOfCols = 2;
-	int height = _m / nOfLines;
-	int width = _s / nOfCols;
-	int counts[4] = {1,1,1,1};
-	int displs[4] = {1,1,1,1};
-	double* result = new double[_m*_s];
+	int nOfLines = nOfCores / nOfCols;
+	const int nOfCoresArg = 2;  // Need to set number of cores manually
+	/*
+		B matrix is transposed from the beginning
+	*/
+	int height = _m / nOfLines;   
+	int width = _n / nOfCols;
+	int targetBlockSize = height * width;
+	int ALineSize = height * _n;
+	//cout << 
+	int BLineSize = width * _n;
 	int rank = 0;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	if (rank == 0){
-		//MPI_Scatterv(_A, counts, displs, MPI_DOUBLE, temp, counts, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	}
-	MPI_Gatherv()
+	double* ABlock = new double[ALineSize];
+	double* BBlock = new double[BLineSize];
+	double* result = new double[_m * _s];
+	MPI_Scatter(_A, ALineSize, MPI_DOUBLE, ABlock, ALineSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Scatter(_B, BLineSize, MPI_DOUBLE, BBlock, BLineSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	double* block = matrixMult(ABlock, BBlock, height, _n, width);
+	MPI_Gather(block, targetBlockSize, MPI_DOUBLE, result, targetBlockSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	return result;
 }
 
 // Additional methods
