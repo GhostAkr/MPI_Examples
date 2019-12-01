@@ -95,8 +95,8 @@ double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, con
 	int width = _n / nOfCols;
 	int targetBlockSize = height * width;
 	int ALineSize = height * _n;
-	//cout << 
 	int BLineSize = width * _n;
+	cout << "ALineSize = " << ALineSize << endl;
 	int rank = 0;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	double* ABlock = new double[ALineSize];
@@ -104,8 +104,50 @@ double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, con
 	double* result = new double[_m * _s];
 	MPI_Scatter(_A, ALineSize, MPI_DOUBLE, ABlock, ALineSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	MPI_Scatter(_B, BLineSize, MPI_DOUBLE, BBlock, BLineSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	double* block = matrixMult(ABlock, BBlock, height, _n, width);
+	double* buffBBlock = transpose(BBlock, width, _n);
+	double* block = matrixMult(ABlock, buffBBlock, height, _n, width);
+	/*if (rank == 0) {
+		cout << "Now on " << rank << " rank" << endl;
+		cout << "Calculated block is" << endl;
+		printMatr(block, height, width);
+		cout << "ABlock is" << endl;
+		printMatr(ABlock, height, _n);
+		cout << "BBlock is" << endl;
+		printMatr(BBlock, width, _n);
+	}*/
+	/*if (rank == 1) {
+		cout << "Now on " << rank << " rank" << endl;
+		cout << "Calculated block is" << endl;
+		printMatr(block, height, width);
+		cout << "ABlock is" << endl;
+		printMatr(ABlock, height, _n);
+		cout << "BBlock is" << endl;
+		printMatr(BBlock, width, _n);
+	}*/
+	if (rank == 2) {
+		cout << "Now on " << rank << " rank" << endl;
+		cout << "Calculated block is" << endl;
+		printMatr(block, height, width);
+		cout << "ABlock is" << endl;
+		printMatr(ABlock, height, _n);
+		cout << "BBlock is" << endl;
+		printMatr(BBlock, width, _n);
+	}
+	/*if (rank == 3) {
+		cout << "Now on " << rank << " rank" << endl;
+		cout << "Calculated block is" << endl;
+		printMatr(block, height, width);
+		cout << "ABlock is" << endl;
+		printMatr(ABlock, height, _n);
+		cout << "BBlock is" << endl;
+		printMatr(BBlock, width, _n);
+	}*/
+	delete[] buffBBlock;
+	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Gather(block, targetBlockSize, MPI_DOUBLE, result, targetBlockSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	delete[] block;
+	delete[] ABlock;
+	delete[] BBlock;
 	return result;
 }
 

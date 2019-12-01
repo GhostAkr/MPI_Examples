@@ -69,6 +69,16 @@ double* matrixMult(double* _source1, double* _source2, int m, int n, int s) {
 	return result;
 }
 
+double* transpose(double* _source, int m, int n) {
+	double* result = new double[n * m];
+	for (int i = 0; i < m; ++i) {
+		for (int j = 0; j < n; ++j) {
+			result[j * m + i] = _source[i * n + j];
+		}
+	}
+	return result;
+}
+
 // Staff things
 
 void printMatr(double** _mesh, int _rows, int _cols) {  // TODO: rename source matrix
