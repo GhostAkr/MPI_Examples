@@ -9,11 +9,11 @@ int main(int argc, char* argv[]) {
 	MPI_Init(&argc, &argv);
 	int rank = 0;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	int nOfCores;
+	int nOfCores = 0;
 	MPI_Comm_size(MPI_COMM_WORLD, &nOfCores);
 	// Source matrices
-	int m = 2, n = 2;  // A[m x n]
-	int s = 2;  // B[n x s]
+	int m = 4, n = 4;  // A[m x n]
+	int s = 4;  // B[n x s]
 	double* A = NULL;
 	double* B = NULL;
 	// Initialization

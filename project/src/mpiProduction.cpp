@@ -85,69 +85,35 @@ double** matrixBlockMult(double** _A, double** _B, int _m, int _n, int _s) {
 }
 
 double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, const int nOfCores){
-	int nOfCols = 2;
-	int nOfLines = nOfCores / nOfCols;
-	const int nOfCoresArg = 2;  // Need to set number of cores manually
+	//int nOfCols = 2;
+	//int nOfLines = nOfCores / nOfCols;
+	//const int nOfCoresArg = 2;  // Need to set number of cores manually
 	/*
 		B matrix is transposed from the beginning
 	*/
-	int height = _m / nOfLines;   
-	int width = _n / nOfCols;
-	int targetBlockSize = height * width;
+	int height = _m / nOfCores;   
+	//int width = _n / nOfCols;
+	int targetBlockSize = height * _s;
 	int ALineSize = height * _n;
-	int BLineSize = width * _n;
-	cout << "ALineSize = " << ALineSize << endl;
+	//int BLineSize = width * _n;
+	//cout << "ALineSize = " << ALineSize << endl;
 	int rank = 0;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	double* ABlock = new double[ALineSize];
-	double* BBlock = new double[BLineSize];
+	//double* BBlock = new double[BLineSize];
 	double* result = new double[_m * _s];
 	MPI_Scatter(_A, ALineSize, MPI_DOUBLE, ABlock, ALineSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	MPI_Scatter(_B, BLineSize, MPI_DOUBLE, BBlock, BLineSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	double* buffBBlock = transpose(BBlock, width, _n);
-	double* block = matrixMult(ABlock, buffBBlock, height, _n, width);
-	/*if (rank == 0) {
-		cout << "Now on " << rank << " rank" << endl;
-		cout << "Calculated block is" << endl;
-		printMatr(block, height, width);
-		cout << "ABlock is" << endl;
-		printMatr(ABlock, height, _n);
-		cout << "BBlock is" << endl;
-		printMatr(BBlock, width, _n);
-	}*/
-	/*if (rank == 1) {
-		cout << "Now on " << rank << " rank" << endl;
-		cout << "Calculated block is" << endl;
-		printMatr(block, height, width);
-		cout << "ABlock is" << endl;
-		printMatr(ABlock, height, _n);
-		cout << "BBlock is" << endl;
-		printMatr(BBlock, width, _n);
-	}*/
-	if (rank == 2) {
-		cout << "Now on " << rank << " rank" << endl;
-		cout << "Calculated block is" << endl;
-		printMatr(block, height, width);
-		cout << "ABlock is" << endl;
-		printMatr(ABlock, height, _n);
-		cout << "BBlock is" << endl;
-		printMatr(BBlock, width, _n);
-	}
-	/*if (rank == 3) {
-		cout << "Now on " << rank << " rank" << endl;
-		cout << "Calculated block is" << endl;
-		printMatr(block, height, width);
-		cout << "ABlock is" << endl;
-		printMatr(ABlock, height, _n);
-		cout << "BBlock is" << endl;
-		printMatr(BBlock, width, _n);
-	}*/
-	delete[] buffBBlock;
+	cout << "For " << rank << " process ABlock is " << endl;
+	printMatr(ABlock, height, _n);
+	//MPI_Scatter(_B, BLineSize, MPI_DOUBLE, BBlock, BLineSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	//double* buffBBlock = transpose(BBlock, width, _n);
+	double* block = matrixMult(ABlock, _B, height, _n, _s);
+	//delete[] buffBBlock;
 	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Gather(block, targetBlockSize, MPI_DOUBLE, result, targetBlockSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	delete[] block;
 	delete[] ABlock;
-	delete[] BBlock;
+	//delete[] BBlock;
 	return result;
 }
 
