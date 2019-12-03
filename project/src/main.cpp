@@ -12,22 +12,22 @@ int main(int argc, char* argv[]) {
 	int nOfCores = 0;
 	MPI_Comm_size(MPI_COMM_WORLD, &nOfCores);
 	// Source matrices
-	int m = 4, n = 4;  // A[m x n]
+	int m = 8, n = 5;  // A[m x n]
 	int s = 4;  // B[n x s]
 	double* A = NULL;
 	double* B = NULL;
+	// B is common for all of processes
+	B = createMatrLine(n, s);
 	// Initialization
 	if (rank == 0) {
+		cout << "B is" << endl;
+		printMatr(B, n, s);
+		// A is initialized only in root process
 		A = createMatrLine(m, n);
 		cout << "A is" << endl;
 		printMatr(A, m, n);
-		B = createMatrLine(n, s);
-		cout << "B is" << endl;
-		printMatr(A, n, s);
 		cout << "Correct answer is " << endl;
-		double* buffB = transpose(B, n, s);
-		printMatr(matrixMult(A, buffB, m, n, s), m, s);
-		delete[] buffB;
+		printMatr(matrixMult(A, B, m, n, s), m, s);
 	}
 	double* C = matrixBlockMultParal(A, B, m, n, s, nOfCores);
 	if (rank == 0) {
@@ -36,6 +36,7 @@ int main(int argc, char* argv[]) {
 	}
 	delete[] A;
 	delete[] B;
+	delete[] C;
 	MPI_Finalize();
 	//system("pause");
 }
