@@ -31,6 +31,30 @@ double** BLine(double** _B, int _nOfCols, int _nOfLines, int _j, int _width) {
 	return result;
 }
 
+double* ALine(double* _A, int _nOfLines, int _nOfCols, int _i, int _height) {
+	int rows = _height;
+	int cols = _nOfCols;
+	double* result = new double[rows * cols];
+	for (int i = 0; i < rows; ++i) {
+		for (int j = 0; j < cols; ++j) {
+			result[i * cols + j] = _A[((_i - 1) * _height + i) * _nOfCols + j];
+		}
+	}
+	return result;
+}
+
+double* BLine(double* _B, int _nOfCols, int _nOfLines, int _j, int _width) {
+	int rows = _nOfLines;
+	int cols = _width;
+	double* result = new double[rows * cols];
+	for (int i = 0; i < rows; ++i) {
+		for (int j = 0; j < cols; ++j) {
+			result[i * cols + j] = _B[i * _nOfCols + ((_j - 1) * _width + j)];
+		}
+	}
+	return result;
+}
+
 // Block production
 
 double** matrixBlockMult(double** _A, double** _B, int _m, int _n, int _s) {
@@ -57,6 +81,23 @@ double** matrixBlockMult(double** _A, double** _B, int _m, int _n, int _s) {
 			}
 		}
 	}
+	return result;
+}
+
+double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, const int nOfCores){
+	int height = _m / nOfCores;   
+	int targetBlockSize = height * _s;
+	int ALineSize = height * _n;
+	int rank = 0;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	double* ABlock = new double[ALineSize];
+	double* result = new double[_m * _s];
+	MPI_Scatter(_A, ALineSize, MPI_DOUBLE, ABlock, ALineSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	double* block = matrixMult(ABlock, _B, height, _n, _s);
+	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Gather(block, targetBlockSize, MPI_DOUBLE, result, targetBlockSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	delete[] block;
+	delete[] ABlock;
 	return result;
 }
 
