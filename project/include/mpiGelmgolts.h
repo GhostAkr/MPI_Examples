@@ -1,0 +1,35 @@
+#ifndef MPIGELMGOLTS_H
+#define MPIGELMGOLTS_H
+
+#define Pi 3.14
+
+#include <iostream>
+
+using namespace std;
+
+// Additional
+
+double* rightPart(double _step, int _rows, int _cols, double _k);
+double f(double _x, double _y, double _k);
+double* copyMesh(double* _mesh, int _rows, int _cols);
+bool checkResult(double* _result, int _rows, int _cols, double _step);
+double exactSolution(double _x, double _y);
+void zeroLayer(double* _mesh, int _rows, int _cols);
+double* createMesh(double _xBorder, double _yBorder, double _step, double* _rows, double* _cols);  // Step must be valid
+double* createMatrLineGelm(int _rows, int _cols);
+
+// Boundaries
+
+void leftBoundary(double* _mesh, int _rows, int _cols, double _boundValue);
+void rightBoundary(double* _mesh, int _rows, int _cols, double _boundValue);
+void topBoundary(double* _mesh, int _rows, int _cols, double _boundValue);
+void bottomBoundary(double* _mesh, int _rows, int _cols, double _boundValue);
+
+// Sequental realizations
+
+void Zeidel(double* _mesh, int _rows, int _cols, double _k, double _step, int ITERAT);
+void Jacobi(double* _mesh, int _rows, int _cols, double _k, double _step, int ITERAT);
+
+// Parallel realizations
+
+#endif  // MPIGELMGOLTS_H
