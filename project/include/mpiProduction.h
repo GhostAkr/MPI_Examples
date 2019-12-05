@@ -31,4 +31,4 @@ double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, con
 
 // Additional methods
 
-bool compareMatrices(double** _source1, int m1, int n1, double** _source2, int m2, int n2);
+bool compareMatrices(double* _source1, int m1, int n1, double* _source2, int m2, int n2);

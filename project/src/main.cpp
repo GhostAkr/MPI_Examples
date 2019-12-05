@@ -12,27 +12,35 @@ int main(int argc, char* argv[]) {
 	int nOfCores = 0;
 	MPI_Comm_size(MPI_COMM_WORLD, &nOfCores);
 	// Source matrices
-	int m = 8, n = 5;  // A[m x n]
-	int s = 4;  // B[n x s]
+	int m = 1032, n = 1032;  // A[m x n]
+	int s = 1032;  // B[n x s]
 	double* A = NULL;
 	double* B = NULL;
+	double* correctC = NULL;
+	double tInit = 0., tFinal = 0.;
 	// B is common for all of processes
 	B = createMatrLine(n, s);
 	// Initialization
 	if (rank == 0) {
-		cout << "B is" << endl;
-		printMatr(B, n, s);
 		// A is initialized only in root process
 		A = createMatrLine(m, n);
-		cout << "A is" << endl;
-		printMatr(A, m, n);
-		cout << "Correct answer is " << endl;
-		printMatr(matrixMult(A, B, m, n, s), m, s);
+		tInit = MPI_Wtime();
+		correctC = matrixMult(A, B, m, n, s);
+		tFinal = MPI_Wtime();
+		cout << "Time spent with sequental production: " << tFinal - tInit << endl;
 	}
+	tInit = MPI_Wtime();
 	double* C = matrixBlockMultParal(A, B, m, n, s, nOfCores);
+	tFinal = MPI_Wtime();
+	MPI_Barrier(MPI_COMM_WORLD);
 	if (rank == 0) {
-		cout << "Calculated answer is " << endl;
-		printMatr(C, m, s);
+		if (compareMatrices(correctC, m, s, C, m, s)) {
+			cout << "Answer is correct" << endl;
+		}
+		else {
+			cout << "Answer is NOT correct" << endl;
+		}
+		cout << "Time spent with parallel production:" << tFinal - tInit << endl;
 	}
 	delete[] A;
 	delete[] B;

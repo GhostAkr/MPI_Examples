@@ -103,14 +103,14 @@ double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, con
 
 // Additional methods
 
-bool compareMatrices(double** _source1, int m1, int n1, double** _source2, int m2, int n2) {
+bool compareMatrices(double* _source1, int m1, int n1, double* _source2, int m2, int n2) {
 	double epsNull = 1e-5;
 	if (m1 != m2 || n1 != n2) {
 		return false;
 	}
 	for (int i = 0; i < m1; ++i) {
 		for (int j = 0; j < n1; ++j) {
-			if (abs(_source1[i][j] - _source2[i][j]) > epsNull) {
+			if (abs(_source1[i * n1 + j] - _source2[i * n2 + j]) > epsNull) {
 				return false;
 			}
 		}
