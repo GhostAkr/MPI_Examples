@@ -177,3 +177,54 @@ void Zeidel(double* _mesh, int _rows, int _cols, double _k, double _step, int IT
 	delete[] buff;
 	delete[] rPart;
 }
+
+
+
+void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, int ITERAT, const int nOfCores) {
+	double* rPart = rightPart(_step, _rows, _cols, _k);
+	double c = 1 / (4 + _k * _k *_step*_step);
+	int rank = 0;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	int* PartSize = new int[nOfCores];
+	int ps = _rows / nOfCores;
+	PartSize[0] = ps;
+	for (int i = 1; i < nOfCores; i++) {
+		PartSize[i] = ps + 1;
+	}
+	int* Displs = new int[nOfCores];
+	for (int i = 0; i < nOfCores; i++) {
+		Displs[i] = i * ps - 1;
+	}
+	double* BufLayer = new double[ps + 1];
+	double* previousLayer = copyMesh(_mesh, _rows, _cols);
+	MPI_Scatterv(previousLayer, PartSize, Displs, MPI_DOUBLE, BufLayer, ps + 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+
+
+	for (int s = 0; s < ITERAT; ++s) {
+		if (s % 2 == 0) {
+			for (int i = 1; i < ps - 1 + (bool)rank; ++i) {
+				for (int j = 1; j < _cols - 1; ++j) {
+					_mesh[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+						BufLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
+				}
+			}
+		}
+		else {
+			for (int i = 1; i < _rows - 1; ++i) {
+				for (int j = 1; j < _cols - 1; ++j) {
+					previousLayer[i * _cols + j] = c * (_mesh[(i - 1) * _cols + j] + _mesh[(i + 1) * _cols + j] + _mesh[i * _cols + (j - 1)] + \
+						_mesh[i * _cols + (j + 1)] + rPart[i * _cols + j]);
+				}
+			}
+		}
+	}
+	//if (checkResult(_mesh, _rows, _cols, _step)) {
+	//	cout << "Answer is correct" << endl;
+	//}
+	//else {
+	//	cout << "Answer is INcorrect" << endl;
+	//}
+	delete[] previousLayer;
+	delete[] rPart;
+}

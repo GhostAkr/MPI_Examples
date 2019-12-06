@@ -2,7 +2,7 @@
 #define MPIGELMGOLTS_H
 
 #define Pi 3.14
-
+#include "mpi.h"
 #include <iostream>
 
 using namespace std;
@@ -32,4 +32,5 @@ void Jacobi(double* _mesh, int _rows, int _cols, double _k, double _step, int IT
 
 // Parallel realizations
 
+void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, int ITERAT, const int nOfCores);
 #endif  // MPIGELMGOLTS_H
