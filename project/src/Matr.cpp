@@ -94,7 +94,9 @@ void printMatr(double* _mesh, int _rows, int _cols) {
 	for (int i = 0; i < _rows; ++i) {
 		for (int j = 0; j < _cols; ++j) {
 			cout << _mesh[i * _cols + j] << " ";
+			//printf("%.2f ", _mesh[i * _cols + j]);
 		}
 		cout << endl;
+		printf("\n");
 	}
 }

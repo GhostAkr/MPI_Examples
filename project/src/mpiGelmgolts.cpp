@@ -87,8 +87,8 @@ void zeroLayer(double* _mesh, int _rows, int _cols) {
 double* createMesh(double _xBorder, double _yBorder, double _step, double* _rows, double* _cols) {
 	double zeroPoint = 0.0;
 	// Step must be valid. Here is no exception for it!
-	int rows = (_yBorder - zeroPoint) / _step + 1;
-	int cols = (_xBorder - zeroPoint) / _step + 1;
+	int rows = (_yBorder - zeroPoint) / _step;
+	int cols = (_xBorder - zeroPoint) / _step;
 	*_rows = rows;
 	*_cols = cols;
 	double* resMesh = createMatrLineGelm(rows, cols);
@@ -187,44 +187,87 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	int* PartSize = new int[nOfCores];
 	int ps = _rows / nOfCores;
-	PartSize[0] = ps;
-	for (int i = 1; i < nOfCores; i++) {
-		PartSize[i] = ps + 1;
+	double* res = new double[_cols * (ps + 1)];
+	PartSize[0] = (ps + 1) * _cols;
+	for (int i = 1; i < nOfCores - 1; i++) {
+		PartSize[i] = (ps + 2) * _cols;
 	}
+	int* PartSizeOut = new int[nOfCores];
+	for (int i = 0; i < nOfCores; i++) {
+		PartSizeOut[i] = ps * _cols;
+	}
+	PartSize[nOfCores - 1] = (ps + 1) * _cols;
 	int* Displs = new int[nOfCores];
 	for (int i = 0; i < nOfCores; i++) {
-		Displs[i] = i * ps - 1;
+		Displs[i] = (i * ps - 1) * _cols;
 	}
-	double* BufLayer = new double[ps + 1];
+	int* DisplsOut = new int[nOfCores];
+	for (int i = 0; i < nOfCores; i++) {
+		DisplsOut[i] = (bool)i*_cols;
+	}
+	double* BufLayer = new double[_cols * (ps + 2)];
+	for (int i = 0; i < _cols * (ps + 2); ++i) {
+		BufLayer[i] = 0.;
+	}
 	double* previousLayer = copyMesh(_mesh, _rows, _cols);
-	MPI_Scatterv(previousLayer, PartSize, Displs, MPI_DOUBLE, BufLayer, ps + 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-
-
+	MPI_Scatterv(previousLayer, PartSize, Displs, MPI_DOUBLE, BufLayer, (ps + 2) * _cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	cout << "After Scatter at " << rank << " process" << endl;
 	for (int s = 0; s < ITERAT; ++s) {
 		if (s % 2 == 0) {
 			for (int i = 1; i < ps - 1 + (bool)rank; ++i) {
 				for (int j = 1; j < _cols - 1; ++j) {
-					_mesh[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+					res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 						BufLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 				}
 			}
 		}
 		else {
-			for (int i = 1; i < _rows - 1; ++i) {
+			for (int i = 1; i < ps - 1 + (bool)rank; ++i) {
 				for (int j = 1; j < _cols - 1; ++j) {
-					previousLayer[i * _cols + j] = c * (_mesh[(i - 1) * _cols + j] + _mesh[(i + 1) * _cols + j] + _mesh[i * _cols + (j - 1)] + \
-						_mesh[i * _cols + (j + 1)] + rPart[i * _cols + j]);
+					BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
+						res[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 				}
 			}
 		}
 	}
-	//if (checkResult(_mesh, _rows, _cols, _step)) {
-	//	cout << "Answer is correct" << endl;
+	cout << "After calculating at " << rank << " process" << endl;
+	double* resBuf = NULL;
+	cout << endl;
+	printMatr(BufLayer, ps + 2, _cols);
+	if (rank != 0 && rank != nOfCores - 1) {
+		resBuf = BufLayer + _cols;
+	}
+	else if (rank == nOfCores - 1) {
+		resBuf = BufLayer + (_cols * 2);
+	}
+
+
+		
+		cout << "resBuf[1] = " << resBuf[1] << endl;
 	//}
-	//else {
-	//	cout << "Answer is INcorrect" << endl;
-	//}
+	//cout << "resBuf[ps * _cols] = " << resBuf[ps * _cols + 1] << endl;
+	
+	//resBuf = new double[_cols * ps];
+	cout << "After new at " << rank << " process" << endl;
+	/*for (int i = 0; i < ps * _cols; ++i) {
+		for (int j = 0; j < _cols; ++j) {
+			resBuf[i * _cols + j] = BufLayer[(i + 1) * _cols + j];
+		}
+	}*/
+	cout << "After cutting at " << rank << " process" << endl;
+	
+	MPI_Barrier(MPI_COMM_WORLD);
+	cout << "After Barrier at " << rank << " process" << endl;
+	MPI_Gather(resBuf, ps * _cols, MPI_DOUBLE, previousLayer, ps * _cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	//MPI_Gather(previousLayer + _cols)
+	if (rank == 0) {
+		if (checkResult(previousLayer, _rows, _cols, _step)) {
+			cout << "Answer is correct" << endl;
+		}
+		else {
+			cout << "Answer is INcorrect" << endl;
+		}
+	}
 	delete[] previousLayer;
 	delete[] rPart;
 }

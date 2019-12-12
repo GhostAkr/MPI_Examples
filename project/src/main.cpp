@@ -46,26 +46,35 @@ int main(int argc, char* argv[]) {
 		//system("pause");
 	}
 	if (GELMGOLTS) {
+		MPI_Init(&argc, &argv);
+		int rank = 0;
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 		// Init block
 		double rows = 0.0;
 		double cols = 0.0;
-		double step = 0.01;
-		double* mesh1 = createMesh(1, 1, step, &rows, &cols);
-		double* mesh2 = copyMesh(mesh1, rows, cols);
+		double step = 0.1;
+		double* mesh1 = NULL;
+		double* mesh2 = NULL;
 		double t1 = 0.0, t2 = 0.0;
 		int nOfIters = 15000;
-
+		// Assigning block
+		mesh1 = createMesh(1, 1, step, &rows, &cols);
+		//cout << "Rows = " << rows << endl;
+		//cout << "Cols = " << cols << endl;
 		// Jacobi
-		cout << "Jacobi" << endl;
-		Jacobi(mesh1, rows, cols, 0, step, nOfIters);
+		
+		//cout << "Jacobi" << endl;
+		JacobiParall(mesh1, rows, cols, 0, step, nOfIters,2);
 
 		// Zeidel
-		cout << "Zeidel" << endl;
-		Zeidel(mesh2, rows, cols, 1, step, nOfIters);
+		//cout << "Zeidel" << endl;
+		//Zeidel(mesh2, rows, cols, 1, step, nOfIters);
 
 		// Cleanup
 		delete[] mesh1;
 		delete[] mesh2;
-		system("pause");
+		//system("pause");
+		MPI_Finalize();
 	}
+
 }
