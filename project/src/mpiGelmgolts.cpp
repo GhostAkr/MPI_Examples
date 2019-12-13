@@ -183,65 +183,115 @@ void Zeidel(double* _mesh, int _rows, int _cols, double _k, double _step, int IT
 void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, int ITERAT, const int nOfCores) {
 	double* rPart = rightPart(_step, _rows, _cols, _k);
 	double c = 1 / (4 + _k * _k *_step*_step);
+	MPI_Status stat;
 	int rank = 0;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	int* PartSize = new int[nOfCores];
 	int ps = _rows / nOfCores;
-	double* res = new double[_cols * (ps + 1)];
+
+	double* res = new double[_cols * (ps + 2)];
+	for (int i = 0; i < _cols * (ps + 2); ++i) {
+		res[i] = 0.;
+	}
+
+
 	PartSize[0] = (ps + 1) * _cols;
 	for (int i = 1; i < nOfCores - 1; i++) {
 		PartSize[i] = (ps + 2) * _cols;
 	}
+	PartSize[nOfCores - 1] = (ps + 1) * _cols;
+
+
 	int* PartSizeOut = new int[nOfCores];
 	for (int i = 0; i < nOfCores; i++) {
 		PartSizeOut[i] = ps * _cols;
 	}
-	PartSize[nOfCores - 1] = (ps + 1) * _cols;
+
+
 	int* Displs = new int[nOfCores];
-	for (int i = 0; i < nOfCores; i++) {
+	Displs[0] = 0;
+	for (int i = 1; i < nOfCores; i++) {
 		Displs[i] = (i * ps - 1) * _cols;
 	}
+
+
 	int* DisplsOut = new int[nOfCores];
 	for (int i = 0; i < nOfCores; i++) {
 		DisplsOut[i] = (bool)i*_cols;
 	}
+
+
 	double* BufLayer = new double[_cols * (ps + 2)];
 	for (int i = 0; i < _cols * (ps + 2); ++i) {
 		BufLayer[i] = 0.;
 	}
+	cout << rank << " " << (bool)rank*(bool)(nOfCores - rank - 1) << endl;
 	double* previousLayer = copyMesh(_mesh, _rows, _cols);
 	MPI_Scatterv(previousLayer, PartSize, Displs, MPI_DOUBLE, BufLayer, (ps + 2) * _cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	cout << "After Scatter at " << rank << " process" << endl;
 	for (int s = 0; s < ITERAT; ++s) {
 		if (s % 2 == 0) {
-			for (int i = 1; i < ps - 1 + (bool)rank; ++i) {
+			for (int i = 1; i < ps + 1 + (bool)rank*(bool)(nOfCores - rank - 1); ++i) {
 				for (int j = 1; j < _cols - 1; ++j) {
 					res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 						BufLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 				}
 			}
+			//cout << "ewtwtgwe" << endl;
+			MPI_Sendrecv(res + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 5, res, _cols, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD, &stat);
+			MPI_Sendrecv(res +  _cols , _cols, MPI_DOUBLE, 0, 5, res + ps * _cols, _cols, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, &stat);
+			//if (rank == 0)
+			//MPI_Send(res + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD);
+			//if (rank == 1)
+			//MPI_Recv(res, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, &stat);
+			//if (rank == 1)
+			//	MPI_Send(res + _cols , _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD);
+			//if (rank == 0)
+			//	MPI_Recv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &stat);
 		}
+
+
+
+
 		else {
-			for (int i = 1; i < ps - 1 + (bool)rank; ++i) {
+			for (int i = 1; i < ps + 1 + (bool)rank*(bool)(nOfCores - rank - 1); ++i) {
 				for (int j = 1; j < _cols - 1; ++j) {
 					BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
 						res[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 				}
 			}
+			//cout << "ewtwtgwe" << endl;
+			MPI_Sendrecv(BufLayer + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 5, BufLayer, _cols, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD, &stat);
+			MPI_Sendrecv(BufLayer + _cols, _cols, MPI_DOUBLE, 0, 5, BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, &stat);
+			//if (rank == 0)
+			//	MPI_Send(BufLayer + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD);
+			//if (rank == 1)
+			//	MPI_Recv(BufLayer, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, &stat);
+			//if (rank == 1)
+			//	MPI_Send(BufLayer + _cols, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD);
+			//if (rank == 0)
+			//	MPI_Recv(BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &stat);
 		}
 	}
-	cout << "After calculating at " << rank << " process" << endl;
+	if(rank == 1)
+	printMatr(BufLayer, ps + 1, _cols);
 	double* resBuf = NULL;
 	cout << endl;
-	printMatr(BufLayer, ps + 2, _cols);
-	if (rank != 0 && rank != nOfCores - 1) {
+	//printMatr(BufLayer, ps + 2, _cols);
+	if (rank == 0) {
+		resBuf = BufLayer;
+	}
+	else  {
 		resBuf = BufLayer + _cols;
 	}
-	else if (rank == nOfCores - 1) {
-		resBuf = BufLayer + (_cols * 2);
-	}
 
-
+	//if (rank == 0) {
+	//	for (int i = 0; i < ps; i++) {
+	//		for (int j = 0; j < _cols; j++) {
+	//			cout << resBuf[i * _cols + j];
+	//		}
+	//		cout << endl;
+	//	}
+	//}
 		
 		cout << "resBuf[1] = " << resBuf[1] << endl;
 	//}
@@ -259,7 +309,15 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	MPI_Barrier(MPI_COMM_WORLD);
 	cout << "After Barrier at " << rank << " process" << endl;
 	MPI_Gather(resBuf, ps * _cols, MPI_DOUBLE, previousLayer, ps * _cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	//MPI_Gather(previousLayer + _cols)
+	if (rank == 0)
+		for (int i = 0; i < _cols; i++) {
+			for (int j = 0; j < _rows; j++) {
+				cout << previousLayer[i * _cols + j];
+			}
+			cout << endl;
+		}
+
+
 	if (rank == 0) {
 		if (checkResult(previousLayer, _rows, _cols, _step)) {
 			cout << "Answer is correct" << endl;
