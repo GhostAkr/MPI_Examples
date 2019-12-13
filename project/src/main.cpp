@@ -59,12 +59,18 @@ int main(int argc, char* argv[]) {
 		int nOfIters = 15000;
 		// Assigning block
 		mesh1 = createMesh(1, 1, step, &rows, &cols);
+		mesh2 = copyMesh(mesh1, rows, cols);
 		//cout << "Rows = " << rows << endl;
 		//cout << "Cols = " << cols << endl;
 		// Jacobi
 		
-		//cout << "Jacobi" << endl;
-		JacobiParall(mesh1, rows, cols, 0, step, nOfIters,2);
+		cout << "Jacobi" << endl;
+		//JacobiParall(mesh1, rows, cols, 150, step, nOfIters,2);
+
+		//cout << "Sequental Jacobi" << endl;
+		Jacobi(mesh2, rows, cols, 150, step, nOfIters);
+		//printMatr(mesh2, rows, cols);
+
 
 		// Zeidel
 		//cout << "Zeidel" << endl;
@@ -73,7 +79,7 @@ int main(int argc, char* argv[]) {
 		// Cleanup
 		delete[] mesh1;
 		delete[] mesh2;
-		//system("pause");
+		system("pause");
 		MPI_Finalize();
 	}
 
