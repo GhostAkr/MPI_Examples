@@ -260,24 +260,17 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 1){
-				//cout << "superout, s = " << s << "rank = " << rank << endl;
+
 				MPI_Recv(res, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, &stat);
 				MPI_Send(res + _cols, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD);
 			}
-			//if (rank == 1){
-			//	MPI_Send(res + _cols, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD);
-			//	cout << "3" << endl;
-			//}
+
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0){
 				MPI_Recv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &stat);
 			}
 			//cout << "Sends in first cycle" << endl;
 		}
-
-
-
-
 		else {
 			for (int i = 1; i < ps  + (bool)rank*(bool)(nOfCores - rank - 1); ++i) {
 				for (int j = 1; j < _cols - 1; ++j) {
@@ -296,10 +289,6 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 				MPI_Recv(BufLayer, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, &stat);
 				MPI_Send(BufLayer + _cols, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD);
 			}
-			//if (rank == 1){
-			//	MPI_Send(res + _cols, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD);
-			//	cout << "3" << endl;
-			//}
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0){
 				MPI_Recv(BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &stat);
@@ -310,27 +299,9 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 
 
 
-	//if (rank == 0){
-	//	MPI_Send(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD);
-	//}
-	//			MPI_Barrier(MPI_COMM_WORLD);
-	//			if (rank == 1){
-	//				MPI_Recv(res, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, &stat);
-	//				MPI_Send(res + _cols, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD);
-	//			}
-	//			MPI_Barrier(MPI_COMM_WORLD);
-	//			if (rank == 0){
-	//				MPI_Recv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &stat);
-	//			}
-
-
-
-
-	/*if(rank == 1)
-	printMatr(BufLayer, ps + 1, _cols);*/
 	double* resBuf = NULL;
 	cout << endl;
-	//printMatr(BufLayer, ps + 2, _cols);
+
 	if (rank == 0) {
 		resBuf = BufLayer;
 	}
@@ -338,26 +309,12 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		resBuf = BufLayer + _cols;
 	}
 
-	//if (rank == 0) {
-	//	for (int i = 0; i < ps; i++) {
-	//		for (int j = 0; j < _cols; j++) {
-	//			cout << resBuf[i * _cols + j];
-	//		}
-	//		cout << endl;
-	//	}
-	//}
+
 		
 		cout << "resBuf[1] = " << resBuf[1] << endl;
-	//}
-	//cout << "resBuf[ps * _cols] = " << resBuf[ps * _cols + 1] << endl;
-	
-	//resBuf = new double[_cols * ps];
+
 	cout << "After new at " << rank << " process" << endl;
-	/*for (int i = 0; i < ps * _cols; ++i) {
-		for (int j = 0; j < _cols; ++j) {
-			resBuf[i * _cols + j] = BufLayer[(i + 1) * _cols + j];
-		}
-	}*/
+
 	cout << "After cutting at " << rank << " process" << endl;
 	
 	MPI_Barrier(MPI_COMM_WORLD);
