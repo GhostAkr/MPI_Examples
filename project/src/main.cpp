@@ -72,12 +72,15 @@ int main(int argc, char* argv[]) {
 
 		// Zeidel
 		//cout << "Zeidel" << endl;
-		Zeidel(mesh2, rows, cols, 1, step, nOfIters);
+		//Zeidel(mesh2, rows, cols, 1, step, nOfIters);
+		//printMatr(mesh2, rows, cols);
+
+		ZeidelParall(mesh1, rows, cols, 150, step, nOfIters, nproc);
 
 		// Cleanup
 		delete[] mesh1;
 		delete[] mesh2;
-		system("pause");
+		//system("pause");
 		MPI_Finalize();
 	}
 
