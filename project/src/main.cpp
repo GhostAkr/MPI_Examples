@@ -65,10 +65,10 @@ int main(int argc, char* argv[]) {
 		// Jacobi
 		
 		cout << "Jacobi" << endl;
-		//JacobiParall(mesh1, rows, cols, 150, step, nOfIters,2);
+		JacobiParall(mesh1, rows, cols, 150, step, nOfIters,2);
 
 		//cout << "Sequental Jacobi" << endl;
-		Jacobi(mesh2, rows, cols, 150, step, nOfIters);
+		//Jacobi(mesh2, rows, cols, 150, step, nOfIters);
 		//printMatr(mesh2, rows, cols);
 
 
