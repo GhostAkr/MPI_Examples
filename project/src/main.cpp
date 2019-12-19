@@ -64,20 +64,20 @@ int main(int argc, char* argv[]) {
 		mesh2 = copyMesh(mesh1, rows, cols);
 		// Jacobi
 		//cout << "Jacobi" << endl;
-		JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
+		//JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
 
-		/*cout << "Sequental Jacobi" << endl;
-		Jacobi(mesh2, rows, cols, 150, step, nOfIters);
-		printMatr(mesh2, rows, cols);*/
+		//cout << "Sequental Jacobi" << endl;
+		//Jacobi(mesh2, rows, cols, 150, step, nOfIters);
+		//printMatr(mesh2, rows, cols);
 
 		// Zeidel
 		//cout << "Zeidel" << endl;
-		//Zeidel(mesh2, rows, cols, 1, step, nOfIters);
+		Zeidel(mesh2, rows, cols, 1, step, nOfIters);
 
 		// Cleanup
 		delete[] mesh1;
 		delete[] mesh2;
-		//system("pause");
+		system("pause");
 		MPI_Finalize();
 	}
 
