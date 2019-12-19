@@ -48,6 +48,8 @@ int main(int argc, char* argv[]) {
 	if (GELMGOLTS) {
 		MPI_Init(&argc, &argv);
 		int rank = 0;
+		int nproc = 0;
+		MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 		// Init block
 		double rows = 0.0;
@@ -61,12 +63,12 @@ int main(int argc, char* argv[]) {
 		mesh1 = createMesh(1, 1, step, &rows, &cols);
 		mesh2 = copyMesh(mesh1, rows, cols);
 		// Jacobi
-		cout << "Jacobi" << endl;
-		JacobiParall(mesh1, rows, cols, 150, step, nOfIters,2);
+		//cout << "Jacobi" << endl;
+		JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
 
-		//cout << "Sequental Jacobi" << endl;
-		//Jacobi(mesh2, rows, cols, 150, step, nOfIters);
-		//printMatr(mesh2, rows, cols);
+		/*cout << "Sequental Jacobi" << endl;
+		Jacobi(mesh2, rows, cols, 150, step, nOfIters);
+		printMatr(mesh2, rows, cols);*/
 
 		// Zeidel
 		//cout << "Zeidel" << endl;
