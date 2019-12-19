@@ -190,47 +190,43 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	int* PartSize = new int[nOfCores];
 	int ps = _rows / nOfCores;
-
+	// Results from one core
 	double* res = new double[_cols * (ps + 2)];
 	for (int i = 0; i < _cols * (ps + 2); ++i) {
 		res[i] = 0.;
 	}
-
-
+	// Filling PartSize
 	PartSize[0] = (ps + 1) * _cols;
 	for (int i = 1; i < nOfCores - 1; i++) {
 		PartSize[i] = (ps + 2) * _cols;
 	}
 	PartSize[nOfCores - 1] = (ps + 1) * _cols;
-
-
+	// Filling PartSizeOut
 	int* PartSizeOut = new int[nOfCores];
 	for (int i = 0; i < nOfCores; i++) {
 		PartSizeOut[i] = ps * _cols;
 	}
-
-
+	// Dispacements
 	int* Displs = new int[nOfCores];
 	Displs[0] = 0;
 	for (int i = 1; i < nOfCores; i++) {
 		Displs[i] = (i * ps - 1) * _cols;
 	}
-
-
+	// Displacements out
 	int* DisplsOut = new int[nOfCores];
 	for (int i = 0; i < nOfCores; i++) {
 		DisplsOut[i] = (bool)i*_cols;
 	}
-
-
+	// Buffer Layer
 	double* BufLayer = new double[_cols * (ps + 2)];
 	for (int i = 0; i < _cols * (ps + 2); ++i) {
 		BufLayer[i] = 0.;
 	}
-	cout << rank << " " << (bool)rank*(bool)(nOfCores - rank - 1) << endl;
+	//cout << rank << " " << (bool)rank*(bool)(nOfCores - rank - 1) << endl; // TODO: delete comment
 	double* previousLayer = copyMesh(_mesh, _rows, _cols);
-	//double* previousLayer = new double[_rows*_cols];
 
+	//TODO: delete comments
+	//double* previousLayer = new double[_rows*_cols];
 	//if (rank == 0)
 	//	for (int i = 0; i < _cols; i++) {
 	//		for (int j = 0; j < _rows; j++) {
@@ -238,39 +234,36 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	//		}
 	//	}
 
+	// Check this
 	MPI_Scatterv(previousLayer, PartSize, Displs, MPI_DOUBLE, BufLayer, (ps + 2) * _cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	for (int s = 0; s < ITERAT; ++s) {
+		// Even iterations
 		if (s % 2 == 0) {
 			for (int i = 1; i < ps  + (bool)rank*(bool)(nOfCores - rank - 1); ++i) {
 				for (int j = 1; j < _cols - 1; ++j) {
 					res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
-						BufLayer[i * _cols + (j + 1)] + rPart[(i + rank) * _cols + j]);				}
+						BufLayer[i * _cols + (j + 1)] + rPart[(i + rank) * _cols + j]);				
+				}
 			}
-			//cout << "ewtwtgwe" << endl;
+			// Send-Recieve block
+			// Check this
 			/*MPI_Sendrecv(res + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 5, res, _cols, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD, &stat);
 			MPI_Sendrecv(res +  _cols , _cols, MPI_DOUBLE, 0, 5, res + ps * _cols, _cols, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, &stat);*/
-			if (s == 0 && rank == 0)
-				printMatr(res, ps + 1, _cols);
 			MPI_Barrier(MPI_COMM_WORLD);
-
-			if (s == 0 && rank == 1)
-				printMatr(res, ps + 1, _cols);
 			if (rank == 0){
 				MPI_Send(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD);
 			}
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 1){
-
 				MPI_Recv(res, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, &stat);
 				MPI_Send(res + _cols, _cols, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD);
 			}
-
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0){
 				MPI_Recv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &stat);
 			}
-			//cout << "Sends in first cycle" << endl;
 		}
+		// Odd iterations
 		else {
 			for (int i = 1; i < ps  + (bool)rank*(bool)(nOfCores - rank - 1); ++i) {
 				for (int j = 1; j < _cols - 1; ++j) {
@@ -278,7 +271,8 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 						res[i * _cols + (j + 1)] + rPart[(i + rank) * _cols + j]);
 				}
 			}
-			//cout << "ewtwtgwe" << endl;
+			// Send-Recieve block
+			// Check this
 			//MPI_Sendrecv(BufLayer + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 5, BufLayer, _cols, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD, &stat);
 			//MPI_Sendrecv(BufLayer + _cols, _cols, MPI_DOUBLE, 0, 5, BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, &stat);
 			if (rank == 0){
@@ -293,42 +287,17 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			if (rank == 0){
 				MPI_Recv(BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &stat);
 			}
-			//cout << "Sends in second cycle" << endl;
 		}
 	}
-
-
-
 	double* resBuf = NULL;
-	cout << endl;
-
 	if (rank == 0) {
 		resBuf = BufLayer;
 	}
 	else  {
 		resBuf = BufLayer + _cols;
 	}
-
-
-		
-		cout << "resBuf[1] = " << resBuf[1] << endl;
-
-	cout << "After new at " << rank << " process" << endl;
-
-	cout << "After cutting at " << rank << " process" << endl;
-	
 	MPI_Barrier(MPI_COMM_WORLD);
-	cout << "After Barrier at " << rank << " process" << endl;
 	MPI_Gather(resBuf, ps * _cols, MPI_DOUBLE, previousLayer, ps * _cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	if (rank == 0)
-		for (int i = 0; i < _cols; i++) {
-			for (int j = 0; j < _rows; j++) {
-				cout << previousLayer[i * _cols + j] << " ";
-			}
-			cout << endl;
-		}
-
-
 	if (rank == 0) {
 		if (checkResult(previousLayer, _rows, _cols, _step)) {
 			cout << "Answer is correct" << endl;
