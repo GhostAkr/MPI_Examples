@@ -506,7 +506,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			// Check this
 			/*MPI_Sendrecv(res + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 5, res, _cols, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD, &stat);
 			MPI_Sendrecv(res +  _cols , _cols, MPI_DOUBLE, 0, 5, res + ps * _cols, _cols, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, &stat);*/
-
+			BufLayer = copyMesh(res, ps + 2, _cols);
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0) {
 				MPI_Sendrecv(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
@@ -547,9 +547,11 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			//if (rank == 0){
 			//	MPI_Recv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &stat);
 			//}
+			
 		}
 		// Odd iterations
 		else {
+			//cout << "s = " << s << endl;
 			if (rank == 0) {
 				for (int i = 1; i < ps; ++i) {
 					for (int j = 2; j < _cols - 1; j += 2) {
@@ -574,11 +576,17 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 					}
 				}
 			}
+			//if (rank == 0 && s == 1) {
+			//	/*cout << "On rank 0" << endl;
+			//	cout << "Res" << endl;*/
+			//	printMatr(BufLayer, ps + 2, _cols);
+			//	//cout << "Test" << endl;
+			//}
 			// Send-Recieve block
 			// Check this
 			//MPI_Sendrecv(BufLayer + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 5, BufLayer, _cols, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD, &stat);
 			//MPI_Sendrecv(BufLayer + _cols, _cols, MPI_DOUBLE, 0, 5, BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, &stat);
-
+			res = copyMesh(BufLayer, ps + 2, _cols);
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0) {
 				MPI_Sendrecv(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
