@@ -65,27 +65,22 @@ int main(int argc, char* argv[]) {
 		// Assigning block
 		//mesh1 = createMesh(1, 1, step, &rows, &cols);
 		mesh1 = createMeshFromNodes(1, 1, &step, &rows, &cols, nOfNodes);
-		mesh2 = copyMesh(mesh1, rows, cols);
 
 		// Calculations block
-		// Jacobi
-		//JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
 
-		//cout << "Sequental Jacobi" << endl;
-		//Jacobi(mesh2, rows, cols, 150, step, nOfIters);
-		//printMatr(mesh2, rows, cols);
+		// Jacobi
+		//Jacobi(mesh1, rows, cols, 150, step, nOfIters);
+		//JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
+		//printMatr(mesh1, rows, cols);
 
 		// Zeidel
-		//cout << "Zeidel" << endl;
-		//Zeidel(mesh2, rows, cols, 1, step, nOfIters);
-		//printMatr(mesh2, rows, cols);
-
-		ZeidelParall(mesh1, rows, cols, 150, step, nOfIters, nproc);
+		//Zeidel(mesh1, rows, cols, 1, step, nOfIters);
+		//ZeidelParall(mesh1, rows, cols, 150, step, nOfIters, nproc);
+		//printMatr(mesh1, rows, cols);
 
 		// Cleanup
 		delete[] mesh1;
-		delete[] mesh2;
-		//system("pause");
+		//system("pause");  // For sequental methods
 		MPI_Finalize();
 	}
 
