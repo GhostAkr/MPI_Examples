@@ -35,4 +35,5 @@ void Jacobi(double* _mesh, int _rows, int _cols, double _k, double _step, int IT
 
 void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, int ITERAT, const int nOfCores);
 void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, int ITERAT, const int nOfCores);
+
 #endif  // MPIGELMGOLTS_H

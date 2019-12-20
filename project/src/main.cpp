@@ -51,12 +51,14 @@ int main(int argc, char* argv[]) {
 		int nproc = 0;
 		MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		double tInit = 0.;
+		double tFinal = 0.;
 
 		// Init block
 		double rows = 0.0;
 		double cols = 0.0;
 		double step = 0.1;
-		int nOfNodes = 20;
+		int nOfNodes = 100;
 		double* mesh1 = NULL;
 		double* mesh2 = NULL;
 		double t1 = 0.0, t2 = 0.0;
@@ -68,15 +70,21 @@ int main(int argc, char* argv[]) {
 
 		// Calculations block
 
+		tInit = MPI_Wtime();
 		// Jacobi
 		//Jacobi(mesh1, rows, cols, 150, step, nOfIters);
-		//JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
+		JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
 		//printMatr(mesh1, rows, cols);
 
 		// Zeidel
 		//Zeidel(mesh1, rows, cols, 1, step, nOfIters);
 		//ZeidelParall(mesh1, rows, cols, 150, step, nOfIters, nproc);
 		//printMatr(mesh1, rows, cols);
+		tFinal = MPI_Wtime();
+		if (rank == 0) {
+			double deltaT = tFinal - tInit;
+			cout << "Total time: " << deltaT << endl;
+		}
 
 		// Cleanup
 		delete[] mesh1;
