@@ -483,7 +483,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		if (s % 2 == 0) {
 			if (rank == 0) {
 				for (int i = 1; i < ps; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
+					for (int j = 1; j < _cols - 1; j += 2) {
 						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 							BufLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 					}
@@ -491,7 +491,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			else if (rank == nOfCores - 1) {
 				for (int i = 2; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
+					for (int j = 1; j < _cols - 1; j += 2) {
 						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 							BufLayer[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
 					}
@@ -499,12 +499,13 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			else {
 				for (int i = 1; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
+					for (int j = 1; j < _cols - 1; j += 2) {
 						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 							BufLayer[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
 					}
 				}
 			}
+			BufLayer = copyMesh(res, ps + 2, _cols);
 			//if (rank == 1 && s == 0) {
 			//	/*cout << "On rank 0" << endl;
 			//	cout << "Res" << endl;*/
@@ -559,9 +560,10 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		}
 		// Odd iterations
 		else {
+			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0) {
 				for (int i = 1; i < ps; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
+					for (int j = 2; j < _cols - 1; j += 2) {
 						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
 							res[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 					}
@@ -569,7 +571,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			else if (rank == nOfCores - 1) {
 				for (int i = 2; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
+					for (int j = 2; j < _cols - 1; j += 2) {
 						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
 							res[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
 					}
@@ -577,7 +579,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			else {
 				for (int i = 1; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
+					for (int j = 2; j < _cols - 1; j += 2) {
 						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
 							res[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
 					}
