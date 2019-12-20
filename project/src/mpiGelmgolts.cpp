@@ -335,6 +335,8 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	int rank = 0;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	int ps = _rows / nOfCores;
+	double tInit1 = 0., tInit2 = 0., tFinal1 = 0., tFinal2 = 0.;
+	double tCalc = 0.;
 	// Results from one core
 	double* res = new double[_cols * (ps + 2)];
 	for (int i = 0; i < _cols * (ps + 2); ++i) {
@@ -349,6 +351,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	for (int s = 0; s < ITERAT; ++s) {
 		// Even iterations
 		if (s % 2 == 0) {
+			tInit1 = MPI_Wtime();
 			if (rank == 0) {  // First part
 				for (int i = 1; i < ps; ++i) {
 					for (int j = 1; j < _cols - 1; j += 2) {
@@ -373,7 +376,10 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 					}
 				}
 			}
-			BufLayer = copyMesh(res, ps + 2, _cols);
+			tFinal1 = MPI_Wtime();
+			tCalc += tFinal1 - tInit1;
+			BufLayer = res;
+			//BufLayer = copyMesh(res, ps + 2, _cols);
 			// Send-Recieve block
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0) {
@@ -392,6 +398,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		// Odd iterations
 		else {
 			MPI_Barrier(MPI_COMM_WORLD);
+			tInit2 = MPI_Wtime();
 			if (rank == 0) {  // First part
 				for (int i = 1; i < ps; ++i) {
 					for (int j = 2; j < _cols - 1; j += 2) {
@@ -416,6 +423,8 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 					}
 				}
 			}
+			tFinal2 = MPI_Wtime();
+			tCalc += tFinal2 - tInit2;
 			// Send-Recieve block
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0) {
@@ -431,6 +440,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			MPI_Barrier(MPI_COMM_WORLD);
 		}
 	}
+	//cout << "Test" << endl;
 	// Constructing result
 	double* resBuf = NULL;
 	if (rank == 0) {
@@ -446,12 +456,13 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	MPI_Gather(resBuf, ps * _cols, MPI_DOUBLE, previousLayer, ps * _cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	if (rank == 0) {
 		//printMatr(previousLayer, _rows, _cols);
-		if (checkResult(previousLayer, _rows, _cols, _step)) {
+		/*if (checkResult(previousLayer, _rows, _cols, _step)) {
 			cout << "Answer is correct" << endl;
 		}
 		else {
 			cout << "Answer is INcorrect" << endl;
-		}
+		}*/
+		cout << "Calculation time: " << tCalc << endl;
 	}
 	delete[] previousLayer;
 	delete[] rPart;
