@@ -89,12 +89,18 @@ double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, con
 	int targetBlockSize = height * _s;
 	int ALineSize = height * _n;
 	int rank = 0;
+	double tInit = 0., tFinal = 0.;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	double* ABlock = new double[ALineSize];
 	double* result = new double[_m * _s];
 	MPI_Scatter(_A, ALineSize, MPI_DOUBLE, ABlock, ALineSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	tInit = MPI_Wtime();
 	double* block = matrixMult(ABlock, _B, height, _n, _s);
+	tFinal = MPI_Wtime();
 	MPI_Barrier(MPI_COMM_WORLD);
+	if (rank == 0) {
+		cout << "Calculations time is" << tFinal - tInit << endl;
+	}
 	MPI_Gather(block, targetBlockSize, MPI_DOUBLE, result, targetBlockSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	delete[] block;
 	delete[] ABlock;
@@ -103,14 +109,14 @@ double* matrixBlockMultParal(double* _A, double* _B, int _m, int _n, int _s, con
 
 // Additional methods
 
-bool compareMatrices(double** _source1, int m1, int n1, double** _source2, int m2, int n2) {
+bool compareMatrices(double* _source1, int m1, int n1, double* _source2, int m2, int n2) {
 	double epsNull = 1e-5;
 	if (m1 != m2 || n1 != n2) {
 		return false;
 	}
 	for (int i = 0; i < m1; ++i) {
 		for (int j = 0; j < n1; ++j) {
-			if (abs(_source1[i][j] - _source2[i][j]) > epsNull) {
+			if (abs(_source1[i * n1 + j] - _source2[i * n2 + j]) > epsNull) {
 				return false;
 			}
 		}
