@@ -97,6 +97,15 @@ double* createMesh(double _xBorder, double _yBorder, double _step, double* _rows
 	return resMesh;
 }
 
+double* createMeshFromNodes(double _xBorder, double _yBorder, double* _step, double* _rows, double* _cols, int _nOfNodes) {
+	double zeroPoint = 0.0;
+	*_step = (_yBorder - zeroPoint) / (_nOfNodes - 1);
+	*_rows = _nOfNodes;
+	*_cols = _nOfNodes;
+	double* resMesh = createMatrLineGelm(*_rows, *_cols);
+	return resMesh;
+}
+
 double* createMatrLineGelm(int _rows, int _cols) {
 	double* result = new double[_rows * _cols];
 	for (int i = 0; i < _rows; ++i) {
@@ -474,7 +483,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		if (s % 2 == 0) {
 			if (rank == 0) {
 				for (int i = 1; i < ps; ++i) {
-					for (int j = 1; j < _cols - 1; j += 2) {
+					for (int j = 1; j < _cols - 1; ++j) {
 						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 							BufLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 					}
@@ -482,7 +491,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			else if (rank == nOfCores - 1) {
 				for (int i = 2; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; j += 2) {
+					for (int j = 1; j < _cols - 1; ++j) {
 						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 							BufLayer[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
 					}
@@ -490,7 +499,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			else {
 				for (int i = 1; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; j += 2) {
+					for (int j = 1; j < _cols - 1; ++j) {
 						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 							BufLayer[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
 					}
@@ -506,7 +515,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			// Check this
 			/*MPI_Sendrecv(res + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 5, res, _cols, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD, &stat);
 			MPI_Sendrecv(res +  _cols , _cols, MPI_DOUBLE, 0, 5, res + ps * _cols, _cols, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, &stat);*/
-			BufLayer = copyMesh(res, ps + 2, _cols);
+
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0) {
 				MPI_Sendrecv(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
@@ -547,14 +556,12 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			//if (rank == 0){
 			//	MPI_Recv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &stat);
 			//}
-			
 		}
 		// Odd iterations
 		else {
-			//cout << "s = " << s << endl;
 			if (rank == 0) {
 				for (int i = 1; i < ps; ++i) {
-					for (int j = 2; j < _cols - 1; j += 2) {
+					for (int j = 1; j < _cols - 1; ++j) {
 						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
 							res[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 					}
@@ -562,7 +569,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			else if (rank == nOfCores - 1) {
 				for (int i = 2; i < ps + 1; ++i) {
-					for (int j = 2; j < _cols - 1; j += 2) {
+					for (int j = 1; j < _cols - 1; ++j) {
 						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
 							res[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
 					}
@@ -570,23 +577,17 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			else {
 				for (int i = 1; i < ps + 1; ++i) {
-					for (int j = 2; j < _cols - 1; j += 2) {
+					for (int j = 1; j < _cols - 1; ++j) {
 						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
 							res[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
 					}
 				}
 			}
-			//if (rank == 0 && s == 1) {
-			//	/*cout << "On rank 0" << endl;
-			//	cout << "Res" << endl;*/
-			//	printMatr(BufLayer, ps + 2, _cols);
-			//	//cout << "Test" << endl;
-			//}
 			// Send-Recieve block
 			// Check this
 			//MPI_Sendrecv(BufLayer + ps * (_cols - 1), _cols, MPI_DOUBLE, 1, 5, BufLayer, _cols, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD, &stat);
 			//MPI_Sendrecv(BufLayer + _cols, _cols, MPI_DOUBLE, 0, 5, BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, &stat);
-			res = copyMesh(BufLayer, ps + 2, _cols);
+
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0) {
 				MPI_Sendrecv(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row

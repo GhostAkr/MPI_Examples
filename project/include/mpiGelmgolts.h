@@ -16,6 +16,7 @@ bool checkResult(double* _result, int _rows, int _cols, double _step);
 double exactSolution(double _x, double _y);
 void zeroLayer(double* _mesh, int _rows, int _cols);
 double* createMesh(double _xBorder, double _yBorder, double _step, double* _rows, double* _cols);  // Step must be valid
+double* createMeshFromNodes(double _xBorder, double _yBorder, double* _step, double* _rows, double* _cols, int _nOfNodes);
 double* createMatrLineGelm(int _rows, int _cols);
 
 // Boundaries

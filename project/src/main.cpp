@@ -55,12 +55,14 @@ int main(int argc, char* argv[]) {
 		double rows = 0.0;
 		double cols = 0.0;
 		double step = 0.1;
+		int nOfNodes = 100;
 		double* mesh1 = NULL;
 		double* mesh2 = NULL;
 		double t1 = 0.0, t2 = 0.0;
 		int nOfIters = 15000;
 		// Assigning block
-		mesh1 = createMesh(1, 1, step, &rows, &cols);
+		//mesh1 = createMesh(1, 1, step, &rows, &cols);
+		mesh1 = createMeshFromNodes(1, 1, &step, &rows, &cols, nOfNodes);
 		mesh2 = copyMesh(mesh1, rows, cols);
 		// Jacobi
 		//cout << "Jacobi" << endl;
