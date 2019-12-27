@@ -4,6 +4,7 @@
 #define Pi 3.14
 #include "mpi.h"
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 

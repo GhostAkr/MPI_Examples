@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
 		double rows = 0.0;
 		double cols = 0.0;
 		double step = 0.1;
-		int nOfNodes = 400;
+		int nOfNodes = 200;
 		double* mesh1 = NULL;
 		//double* mesh2 = NULL;
 		double t1 = 0.0, t2 = 0.0;
