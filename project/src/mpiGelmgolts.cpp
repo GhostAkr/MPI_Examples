@@ -347,12 +347,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	int ps = _rows / nOfCores;
 	double tInit1 = 0., tInit2 = 0., tFinal1 = 0., tFinal2 = 0.;
 	double tCalc = 0.;
-	// Results from one core
-	double* res = new double[_cols * (ps + 2)];
-	for (int i = 0; i < _cols * (ps + 2); ++i) {
-		res[i] = 0.;
-	}
-	// Buffer layer for one core
+	// Results layer for one core
 	double* BufLayer = new double[_cols * (ps + 2)];
 	for (int i = 0; i < _cols * (ps + 2); ++i) {
 		BufLayer[i] = 0.;
@@ -461,26 +456,14 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			}
 			tFinal2 = MPI_Wtime();
 			tCalc += tFinal2 - tInit2;
-			//BufLayer = res;
 		}
-		
 		// Send - Recieve block
 		MPI_Startall(nOfReqsS, reqsS);
 		MPI_Startall(nOfReqsR, reqsR);
 		MPI_Waitall(nOfReqsR, reqsR, statR);
 		MPI_Waitall(nOfReqsS, reqsS, statS);
-		/*if (s == 1 && rank == 1) {
-			cout << "Res from rank " << rank << endl;
-			printMatr(BufLayer, ps + 2, _cols);
-		}*/
-		//// Updating res
-		//if (s != 0 && s % 2 == 0) {
-		//	double* tmpContainer = res;
-		//	res = BufLayer;
-		//	BufLayer = tmpContainer;
-		//}
-		
 	}
+	// Constructing result
 	double* resBuf = NULL;
 	if (rank == 0) {
 		resBuf = BufLayer;
@@ -491,7 +474,6 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	else  {
 		resBuf = BufLayer + _cols;
 	}
-	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Gather(resBuf, ps * _cols, MPI_DOUBLE, previousLayer, ps * _cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	if (rank == 0) {
 		//printMatr(previousLayer, _rows, _cols);

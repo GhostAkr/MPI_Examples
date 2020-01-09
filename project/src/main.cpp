@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
 		double rows = 0.0;
 		double cols = 0.0;
 		double step = 0.1;
-		int nOfNodes = 840;
+		int nOfNodes = 212;
 		double* mesh1 = NULL;
 		//double* mesh2 = NULL;
 		double t1 = 0.0, t2 = 0.0;
@@ -73,12 +73,12 @@ int main(int argc, char* argv[]) {
 
 		// Jacobi
 		//Jacobi(mesh1, rows, cols, 150, step, nOfIters);
-		//JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
+		JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
 		//printMatr(mesh1, rows, cols);
 
 		// Zeidel
 		//Zeidel(mesh1, rows, cols, 1, step, nOfIters);
-		ZeidelParall(mesh1, rows, cols, 150, step, nOfIters, nproc);
+		//ZeidelParall(mesh1, rows, cols, 150, step, nOfIters, nproc);
 		//printMatr(mesh1, rows, cols);
 
 		tFinal = MPI_Wtime();
