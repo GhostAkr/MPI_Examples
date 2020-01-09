@@ -54,13 +54,13 @@ double* copyMesh(double* _mesh, int _rows, int _cols) {
 }
 
 bool checkResult(double* _result, int _rows, int _cols, double _step) {
-	cout << "Step while checking = " << _step << endl;
-	double epsNull = 1e-4;
+	std::cout << "Step while checking = " << _step << endl;
+	double epsNull = 1e-1;
 	for (int i = 0; i < _rows; ++i) {
 		for (int j = 0; j < _cols; ++j) {
 			if (fabs(_result[i * _cols + j] - exactSolution(i * _step, j * _step)) > epsNull) {
-				cout << "j * step = " << j * _step << endl;
-				cout << "Result[" << i << "][" << j << "] = " << _result[i * _cols + j] << "; Exact = " << exactSolution(i * _step, j * _step) << endl;
+				std::cout << "j * step = " << j * _step << endl;
+				std::cout << "Result[" << i << "][" << j << "] = " << _result[i * _cols + j] << "; Exact = " << exactSolution(i * _step, j * _step) << endl;
 				return false;
 			}
 		}
@@ -91,8 +91,8 @@ double* createMesh(double _xBorder, double _yBorder, double _step, double* _rows
 	// Step must be valid. Here is no exception for it!
 	int rows = (_yBorder - zeroPoint) / _step;
 	int cols = (_xBorder - zeroPoint) / _step;
-	cout << "Rows = " << rows << endl;
-	cout << "Cols = " << cols << endl;
+	std::cout << "Rows = " << rows << endl;
+	std::cout << "Cols = " << cols << endl;
 	*_rows = rows;
 	*_cols = cols;
 	double* resMesh = createMatrLineGelm(rows, cols);
@@ -142,15 +142,15 @@ void Jacobi(double* _mesh, int _rows, int _cols, double _k, double _step, int IT
 			}
 		}
 		/*if (checkResult(_mesh, _rows, _cols, _step)) {
-		cout << "Accuracy was reached on " << s << " iteration" << endl;
+		std::cout << "Accuracy was reached on " << s << " iteration" << endl;
 		break;
 		}*/
 	}
 	if (checkResult(_mesh, _rows, _cols, _step)) {
-		cout << "Answer is correct" << endl;
+		std::cout << "Answer is correct" << endl;
 	}
 	else {
-		cout << "Answer is INcorrect" << endl;
+		std::cout << "Answer is INcorrect" << endl;
 	}
 	delete[] previousLayer;
 	delete[] rPart;
@@ -178,15 +178,15 @@ void Zeidel(double* _mesh, int _rows, int _cols, double _k, double _step, int IT
 			}
 		}
 		/*if (checkResult(_mesh, _rows, _cols, _step)) {
-		cout << "Accuracy was reached on " << s << " iteration" << endl;
+		std::cout << "Accuracy was reached on " << s << " iteration" << endl;
 		break;
 		}*/
 	}
 	if (checkResult(_mesh, _rows, _cols, _step)) {
-		cout << "Answer is correct" << endl;
+		std::cout << "Answer is correct" << endl;
 	}
 	else {
-		cout << "Answer is INcorrect" << endl;
+		std::cout << "Answer is INcorrect" << endl;
 	}
 	// Buff points to _mesh or to previousLayer
 	delete[] buff;
@@ -217,34 +217,79 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		BufLayer[i] = 0.;
 	}
 	double* previousLayer = copyMesh(_mesh, _rows, _cols);
-	// Tags for sending
-	MPI_Request* reqsS = new MPI_Request[nOfCores];
-	for (int i = 0; i < nOfCores; ++i) {
-		reqsS[i] = MPI_REQUEST_NULL;
-	}
-	// Tags for recieving
-	MPI_Request* reqsR = new MPI_Request[nOfCores];
-	for (int i = 0; i < nOfCores; ++i) {
-		reqsR[i] = MPI_REQUEST_NULL;
-	}
-	if (rank == 0) {
-		MPI_Send_init(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
-		MPI_Recv_init(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
-	}
-	else if (rank < nOfCores - 1) {
-		MPI_Send_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
-		MPI_Recv_init(res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
-
-		MPI_Send_init(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
-		MPI_Recv_init(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
+	//// Tags for sending lower lines
+	//MPI_Request* reqsSL = new MPI_Request[nOfCores];
+	//for (int i = 0; i < nOfCores; ++i) {
+	//	reqsSL[i] = MPI_REQUEST_NULL;
+	//}
+	//// Tags for sending upper lines
+	//MPI_Request* reqsSU = new MPI_Request[nOfCores];
+	//for (int i = 0; i < nOfCores; ++i) {
+	//	reqsSU[i] = MPI_REQUEST_NULL;
+	//}
+	//// Tags for recieving lower lines
+	//MPI_Request* reqsRL = new MPI_Request[nOfCores];
+	//for (int i = 0; i < nOfCores; ++i) {
+	//	reqsRL[i] = MPI_REQUEST_NULL;
+	//}
+	//// Tags for recieving upper lines
+	//MPI_Request* reqsRU = new MPI_Request[nOfCores];
+	//for (int i = 0; i < nOfCores; ++i) {
+	//	reqsRU[i] = MPI_REQUEST_NULL;
+	//}
+	MPI_Request* reqsS;
+	MPI_Request* reqsR;
+	if (rank == 0 || rank == nOfCores - 1) {
+		reqsS = new MPI_Request;
+		reqsR = new MPI_Request;
 	}
 	else {
-		MPI_Send_init(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
-		MPI_Recv_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
+		reqsS = new MPI_Request[2];
+		reqsR = new MPI_Request[2];
 	}
+	int nOfReqsS = 0;
+	int nOfReqsR = 0;
+	// Initializing Send - Recieve instructions
+	if (rank == 0) {
+		// Lower lines
+		MPI_Send_init(res + (ps - 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
+		MPI_Recv_init(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
+		//std::cout << "Rank " << rank << " sends lower with request " << reqsS + nOfReqsS << endl;
+		//std::cout << "Rank " << rank << " recieves lower with request " << reqsR + nOfReqsR << endl;
+		nOfReqsS++;
+		nOfReqsR++;
+	}
+	else if (rank < nOfCores - 1) {
+		// Upper lines
+		MPI_Send_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
+		MPI_Recv_init(res, _cols, MPI_DOUBLE, rank - 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
+		//std::cout << "Rank " << rank << " sends upper with request " << reqsS + nOfReqsS << endl;
+		//std::cout << "Rank " << rank << " recieves upper with request " << reqsR + nOfReqsR << endl;
+		nOfReqsS++;
+		nOfReqsR++;
+
+		// Lower lines
+		MPI_Send_init(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
+		MPI_Recv_init(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
+		//std::cout << "Rank " << rank << " sends lower with request " << reqsS + nOfReqsS << endl;
+		//std::cout << "Rank " << rank << " recieves lower with request " << reqsR + nOfReqsR << endl;
+		nOfReqsS++;
+		nOfReqsR++;
+	}
+	else {
+		// Upper lines
+		MPI_Send_init(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
+		MPI_Recv_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
+		//std::cout << "Rank " << rank << " sends upper with request " << reqsS + nOfReqsS << endl;
+		//std::cout << "Rank " << rank << " recieves upper with request " << reqsR + nOfReqsR << endl;
+		nOfReqsS++;
+		nOfReqsR++;
+	}
+	MPI_Status* statS = new MPI_Status[2];
+	MPI_Status* statR = new MPI_Status[2];
 	for (int s = 0; s < ITERAT; ++s) {
 		// Even iterations
-		if (s % 2 == 0) {
+		//if (s % 2 == 0) {
 			tInit1 = MPI_Wtime();
 			if (rank == 0) {  // First part
 				for (int i = 1; i < ps; ++i) {
@@ -271,181 +316,62 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 				}
 			}
 			tFinal1 = MPI_Wtime();
-			tCalc += tFinal1 - tInit1;
-			// Send-Recieve block
-			//MPI_Barrier(MPI_COMM_WORLD);
-			//if (rank == 06) {
-			//	MPI_Sendrecv(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
-			//}
-			//else if (rank == nOfCores - 1){
-			//	MPI_Sendrecv(res + 2 *_cols, _cols, MPI_DOUBLE, rank - 1, 42, res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &stat);  // First row
-			//}
-			//else {
-			//    MPI_Sendrecv(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &stat);  // First row
-			//	MPI_Sendrecv(res + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
-			//}
-			//MPI_Barrier(MPI_COMM_WORLD);
-			//MPI_Startall(nOfCores, reqs);
-			//MPI_Start(&reqs[rank]);
-			/*MPI_Start(&reqs[rank]);
-			MPI_Wait(&reqs[rank], &stat);*/
-			if (rank == 0) {
-				cout << "000" << endl;
-				MPI_Start(&req1);
-				//MPI_Wait(&req2, &stat);
-				//MPI_Start(&req2);
-
-			}
-			else {
-				cout << "111" << endl;
-				MPI_Start(&req2);
-				//MPI_Wait(&req1, &stat);
-				//MPI_Start(&req1);
-			}
-			if (rank == 0){
-				MPI_Request_free(&req1);
-				MPI_Request_free(&req2);
-				//MPI_Request_free(&req3);
-				//MPI_Request_free(&req4);
-			}
-			if (rank == 1){
-				//MPI_Request_free(&req1);
-				//MPI_Request_free(&req2);
-				MPI_Request_free(&req3);
-				MPI_Request_free(&req4);
-			}
-			//if (rank == 0 && s == 0) {
-			//	cout << "Before" << &reqsS[0] << endl;
-			//}
-			//cout << "Test2" << endl;
-			//if (rank == 0) {
-			//	MPI_Start(&reqsS[rank]);
-			//	cout << "req0 = " << &reqsS[rank + 1] << endl;
-			//	MPI_Wait(&reqsS[rank + 1], &stat);
-			//	MPI_Start(&reqsR[rank]);
-			//	for (int i = 0; i < nOfCores; ++i) {
-			//		//reqsS[i] = MPI_REQUEST_NULL;
-			//		//reqsR[i] = MPI_REQUEST_NULL;
-			//		//MPI_Request_free(&reqsS[i]);
-			//		//MPI_Request_free(&reqsR[i]);
-			//	}
-			//}
-			//else if (rank < nOfCores - 1) {
-			//	MPI_Start(&reqsS[rank]);
-			//	MPI_Wait(&reqsS[rank - 1], &stat);
-			//	MPI_Start(&reqsR[rank]);
-
-			//	MPI_Start(&reqsS[rank]);
-			//	MPI_Wait(&reqsS[rank + 1], &stat);
-			//	MPI_Start(&reqsR[rank]);
-			//	for (int i = 0; i < nOfCores; ++i) {
-			//		//reqsS[i] = MPI_REQUEST_NULL;
-			//		//reqsR[i] = MPI_REQUEST_NULL;
-			//		//MPI_Request_free(&reqsS[i]);
-			//		//MPI_Request_free(&reqsR[i]);
-			//	}
-			//}
-			//else {
-			//	MPI_Start(&reqsS[rank]);
-			//	cout << "req1 = " << &reqsS[rank + 1] << endl;
-			//	MPI_Wait(&reqsS[rank - 1], &stat);
-			//	MPI_Start(&reqsR[rank]);
-			//	for (int i = 0; i < nOfCores; ++i) {
-			//		//reqsS[i] = MPI_REQUEST_NULL;
-			//		//reqsR[i] = MPI_REQUEST_NULL;
-			//		//MPI_Request_free(&reqsS[i]);
-			//		//MPI_Request_free(&reqsR[i]);
-			//	}
-			//}
-			//if (rank == 0 && s == 0) {
-			//	cout << "After" << &reqsS[0] << endl;
-			//}
-
-
-
-
-			//MPI_Barrier(MPI_COMM_WORLD);
-			//if (rank == 0 && s == 0) {
-			//	//printMatr(res, ps + 2, _cols);
-			//}
-
-			//if (rank == 0) {
-			//	MPI_Isend(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &sendreq);
-			//	MPI_Irecv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &ireq);
-			//}
-			//else if (rank < nOfCores - 1) {
-			//	MPI_Isend(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-			//	MPI_Irecv(res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
-
-			//	MPI_Isend(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
-			//	MPI_Irecv(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &ireq);
-			//}
-			//else {
-			//	MPI_Isend(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-			//	MPI_Irecv(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
-			//}
-			//MPI_Barrier(MPI_COMM_WORLD);
+			tCalc += tFinal1 - tInit1;  // Updating calculation time
+			// Send - Recieve block
+			/*MPI_Startall(nOfCores, reqsSU);
+			MPI_Startall(nOfCores, reqsRL);
+			MPI_Startall(nOfCores, reqsSL);
+			MPI_Startall(nOfCores, reqsRU);*/
+			//std::cout << "Before startall" << endl;
+			MPI_Startall(nOfReqsS, reqsS);
+			MPI_Startall(nOfReqsR, reqsR);
+			//std::cout << "Before startall" << endl;
+			MPI_Waitall(nOfReqsR, reqsR, statR);
+			MPI_Waitall(nOfReqsS, reqsS, statS);
+			double* tmpContainer = res;
+			res = BufLayer;
+			BufLayer = tmpContainer;
+		//}
+		if (s == 0 && rank == 0) {
+			//std::cout << "Res after send-recieves from rank " << rank << endl;
+			//printMatr(res, ps + 2, _cols);
 		}
 		// Odd iterations
-		else {
-			tInit2 = MPI_Wtime();
-			if (rank == 0) {  // First part
-				for (int i = 1; i < ps; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
-						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
-							res[i * _cols + (j + 1)] + rPart[i * _cols + j]);
-					}
-				}
-			}
-			else if (rank == nOfCores - 1) {  // Last part
-				for (int i = 2; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
-						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
-							res[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
-					}
-				}
-			}
-			else {  // Other parts
-				for (int i = 1; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
-						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
-							res[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
-					}
-				}
-			}
-			tFinal2 = MPI_Wtime();
-			tCalc += tFinal2 - tInit2;
-			// Send-Recieve block
-			//MPI_Barrier(MPI_COMM_WORLD);
-			//if (rank == 0) {
-			//	MPI_Sendrecv(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
-			//}
-			//else if (rank == nOfCores - 1){
-			//	MPI_Sendrecv(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &stat);  // First row
-			//}
-			//else {
-			//	MPI_Sendrecv(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &stat);  // First row
-			//	MPI_Sendrecv(res + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
-			//}
-			//MPI_Barrier(MPI_COMM_WORLD);
-			//cout << "Test" << endl;
-			if (rank == 0) {
-				MPI_Isend(BufLayer + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			else if (rank < nOfCores - 1) {
-				MPI_Isend(BufLayer + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(BufLayer, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
-				//MPI_Barrier(MPI_COMM_WORLD);
-				MPI_Isend(BufLayer + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(BufLayer + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			else {
-				MPI_Isend(BufLayer + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(BufLayer + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			MPI_Barrier(MPI_COMM_WORLD);
-		}
+		//else {
+		//	tInit2 = MPI_Wtime();
+		//	if (rank == 0) {  // First part
+		//		for (int i = 1; i < ps; ++i) {
+		//			for (int j = 1; j < _cols - 1; ++j) {
+		//				BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
+		//					res[i * _cols + (j + 1)] + rPart[i * _cols + j]);
+		//			}
+		//		}
+		//	}
+		//	else if (rank == nOfCores - 1) {  // Last part
+		//		for (int i = 2; i < ps + 1; ++i) {
+		//			for (int j = 1; j < _cols - 1; ++j) {
+		//				BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
+		//					res[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
+		//			}
+		//		}
+		//	}
+		//	else {  // Other parts
+		//		for (int i = 1; i < ps + 1; ++i) {
+		//			for (int j = 1; j < _cols - 1; ++j) {
+		//				BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
+		//					res[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
+		//			}
+		//		}
+		//	}
+		//	tFinal2 = MPI_Wtime();
+		//	tCalc += tFinal2 - tInit2;  // Updating calculation time
+		//	// Send - Recieve block
+		//	MPI_Startall(nOfReqsS, reqsS);
+		//	MPI_Startall(nOfReqsR, reqsR);
+		//	//std::cout << "Before startall" << endl;
+		//	MPI_Waitall(nOfReqsR, reqsR, statR);
+		//	MPI_Waitall(nOfReqsS, reqsS, statS);
+		//}
 	}
 	// Constructing result
 	double* resBuf = NULL;
@@ -463,19 +389,19 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	if (rank == 0) {  // Check answer
 		//printMatr(previousLayer, _rows, _cols);
 		if (checkResult(previousLayer, _rows, _cols, _step)) {
-			cout << "Answer is correct" << endl;
+			std::cout << "Answer is correct" << endl;
 		}
 		else {
-			cout << "Answer is INcorrect" << endl;
+			std::cout << "Answer is INcorrect" << endl;
 		}
-		cout << "Error = " << error(previousLayer, _rows, _cols, _step) << endl;
-		cout << "Calculation time: " << tCalc << endl;
+		std::cout << "Error = " << error(previousLayer, _rows, _cols, _step) << endl;
+		std::cout << "Calculation time: " << tCalc << endl;
 	}
 	if (rank == 0) {
-		cout << "Writing to file" << endl;
+		std::cout << "Writing to file" << endl;
 		ofstream file("C:\\Users\\ighos\\Documents\\Programming\\Univercity\\MPI_Examples\\fileJac.dat");
 		if (!file) {
-			cout << "Error while opening file" << endl;
+			std::cout << "Error while opening file" << endl;
 		}
 		for (int i = 1; i < _rows; ++i) {
 			for (int j = 1; j < _cols - 1; ++j) {
@@ -633,7 +559,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			MPI_Barrier(MPI_COMM_WORLD);
 		}
 	}
-	//cout << "Test" << endl;
+	//std::cout << "Test" << endl;
 	// Constructing result
 	double* resBuf = NULL;
 	if (rank == 0) {
@@ -650,19 +576,19 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	if (rank == 0) {
 		//printMatr(previousLayer, _rows, _cols);
 		if (checkResult(previousLayer, _rows, _cols, _step)) {
-			cout << "Answer is correct" << endl;
+			std::cout << "Answer is correct" << endl;
 		}
 		else {
-			cout << "Answer is INcorrect" << endl;
+			std::cout << "Answer is INcorrect" << endl;
 		}
-		cout << "Error = " << error(previousLayer, _rows, _cols, _step) << endl;
-		cout << "Calculation time: " << tCalc << endl;
+		std::cout << "Error = " << error(previousLayer, _rows, _cols, _step) << endl;
+		std::cout << "Calculation time: " << tCalc << endl;
 	}
 	if (rank == 0) {
-		cout << "Writing to file" << endl;
+		std::cout << "Writing to file" << endl;
 		ofstream file("C:\\Users\\ighos\\Documents\\Programming\\Univercity\\MPI_Examples\\fileZeid.dat");
 		if (!file) {
-			cout << "Error while opening file" << endl;
+			std::cout << "Error while opening file" << endl;
 		}
 		for (int i = 1; i < _rows; ++i) {
 			for (int j = 1; j < _cols - 1; ++j) {

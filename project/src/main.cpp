@@ -62,18 +62,13 @@ int main(int argc, char* argv[]) {
 		double* mesh1 = NULL;
 		//double* mesh2 = NULL;
 		double t1 = 0.0, t2 = 0.0;
-		int nOfIters = 20000;
+		int nOfIters = 15000;
 
 		// Assigning block
 		//mesh1 = createMesh(1, 1, step, &rows, &cols);
 		mesh1 = createMeshFromNodes(1, 1, &step, &rows, &cols, nOfNodes);
-		/*cout << "Current step = " << step << endl;
-		cout << "Border = " << step * 11 << endl;
-		cout << "Cols = " << cols << endl;
-		cout << "Rows = " << rows << endl;*/
-
+		
 		// Calculations block
-
 		tInit = MPI_Wtime();
 		// Jacobi
 		//Jacobi(mesh1, rows, cols, 150, step, nOfIters);
