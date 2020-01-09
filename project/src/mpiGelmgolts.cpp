@@ -217,46 +217,31 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		BufLayer[i] = 0.;
 	}
 	double* previousLayer = copyMesh(_mesh, _rows, _cols);
+	// Tags for sending
 	MPI_Request* reqsS = new MPI_Request[nOfCores];
 	for (int i = 0; i < nOfCores; ++i) {
 		reqsS[i] = MPI_REQUEST_NULL;
 	}
+	// Tags for recieving
 	MPI_Request* reqsR = new MPI_Request[nOfCores];
 	for (int i = 0; i < nOfCores; ++i) {
 		reqsR[i] = MPI_REQUEST_NULL;
 	}
-	MPI_Request req1 = MPI_REQUEST_NULL;
-	MPI_Request req2 = MPI_REQUEST_NULL;
-	MPI_Request req3 = MPI_REQUEST_NULL;
-	MPI_Request req4 = MPI_REQUEST_NULL;
 	if (rank == 0) {
-		MPI_Send_init(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &req1);
-		MPI_Recv_init(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &req2);
+		MPI_Send_init(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
+		MPI_Recv_init(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
+	}
+	else if (rank < nOfCores - 1) {
+		MPI_Send_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
+		MPI_Recv_init(res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
 
+		MPI_Send_init(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
+		MPI_Recv_init(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
 	}
 	else {
-		MPI_Send_init(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &req3);
-		MPI_Recv_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &req4);
+		MPI_Send_init(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
+		MPI_Recv_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
 	}
-	/*MPI_Request reqsS [2];
-	MPI_Request reqsR [2];*/
-	//if (rank == 0) {
-	//	MPI_Send_init(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
-	//	MPI_Recv_init(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
-	//}
-	//else if (rank < nOfCores - 1) {
-	//	MPI_Send_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
-	//	MPI_Recv_init(res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
-
-	//	MPI_Send_init(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
-	//	MPI_Recv_init(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
-	//}
-	//else {
-	//	MPI_Send_init(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
-	//	MPI_Recv_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
-	//}
-
-	//cout << "Test" << endl;
 	for (int s = 0; s < ITERAT; ++s) {
 		// Even iterations
 		if (s % 2 == 0) {
