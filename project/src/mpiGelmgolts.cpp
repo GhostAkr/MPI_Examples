@@ -130,9 +130,7 @@ void Jacobi(double* _mesh, int _rows, int _cols, double _k, double _step, int IT
 						previousLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 				}
 			}
-		}
-		/*if (s == 0)
-			printMatr(_mesh, _rows, _cols);*/
+		} 
 		else {
 			for (int i = 1; i < _rows - 1; ++i) {
 				for (int j = 1; j < _cols - 1; ++j) {
@@ -217,26 +215,7 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		BufLayer[i] = 0.;
 	}
 	double* previousLayer = copyMesh(_mesh, _rows, _cols);
-	//// Tags for sending lower lines
-	//MPI_Request* reqsSL = new MPI_Request[nOfCores];
-	//for (int i = 0; i < nOfCores; ++i) {
-	//	reqsSL[i] = MPI_REQUEST_NULL;
-	//}
-	//// Tags for sending upper lines
-	//MPI_Request* reqsSU = new MPI_Request[nOfCores];
-	//for (int i = 0; i < nOfCores; ++i) {
-	//	reqsSU[i] = MPI_REQUEST_NULL;
-	//}
-	//// Tags for recieving lower lines
-	//MPI_Request* reqsRL = new MPI_Request[nOfCores];
-	//for (int i = 0; i < nOfCores; ++i) {
-	//	reqsRL[i] = MPI_REQUEST_NULL;
-	//}
-	//// Tags for recieving upper lines
-	//MPI_Request* reqsRU = new MPI_Request[nOfCores];
-	//for (int i = 0; i < nOfCores; ++i) {
-	//	reqsRU[i] = MPI_REQUEST_NULL;
-	//}
+	// Requests buffers
 	MPI_Request* reqsS;
 	MPI_Request* reqsR;
 	if (rank == 0 || rank == nOfCores - 1) {
@@ -254,8 +233,6 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		// Lower lines
 		MPI_Send_init(res + (ps - 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
 		MPI_Recv_init(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
-		//std::cout << "Rank " << rank << " sends lower with request " << reqsS + nOfReqsS << endl;
-		//std::cout << "Rank " << rank << " recieves lower with request " << reqsR + nOfReqsR << endl;
 		nOfReqsS++;
 		nOfReqsR++;
 	}
@@ -263,16 +240,12 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		// Upper lines
 		MPI_Send_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
 		MPI_Recv_init(res, _cols, MPI_DOUBLE, rank - 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
-		//std::cout << "Rank " << rank << " sends upper with request " << reqsS + nOfReqsS << endl;
-		//std::cout << "Rank " << rank << " recieves upper with request " << reqsR + nOfReqsR << endl;
 		nOfReqsS++;
 		nOfReqsR++;
 
 		// Lower lines
 		MPI_Send_init(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
 		MPI_Recv_init(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
-		//std::cout << "Rank " << rank << " sends lower with request " << reqsS + nOfReqsS << endl;
-		//std::cout << "Rank " << rank << " recieves lower with request " << reqsR + nOfReqsR << endl;
 		nOfReqsS++;
 		nOfReqsR++;
 	}
@@ -280,98 +253,48 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		// Upper lines
 		MPI_Send_init(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
 		MPI_Recv_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
-		//std::cout << "Rank " << rank << " sends upper with request " << reqsS + nOfReqsS << endl;
-		//std::cout << "Rank " << rank << " recieves upper with request " << reqsR + nOfReqsR << endl;
 		nOfReqsS++;
 		nOfReqsR++;
 	}
 	MPI_Status* statS = new MPI_Status[2];
 	MPI_Status* statR = new MPI_Status[2];
 	for (int s = 0; s < ITERAT; ++s) {
-		// Even iterations
-		//if (s % 2 == 0) {
-			tInit1 = MPI_Wtime();
-			if (rank == 0) {  // First part
-				for (int i = 1; i < ps; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
-						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
-							BufLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
-					}
+		tInit1 = MPI_Wtime();
+		if (rank == 0) {  // First part
+			for (int i = 1; i < ps; ++i) {
+				for (int j = 1; j < _cols - 1; ++j) {
+					res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+						BufLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 				}
 			}
-			else if (rank == nOfCores - 1) {  // Last part
-				for (int i = 2; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; ++j) {
-						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
-							BufLayer[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
-					}
-				}
-			}
-			else {
-				for (int i = 1; i < ps + 1; ++i) {  // Other parts
-					for (int j = 1; j < _cols - 1; ++j) {
-						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
-							BufLayer[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
-					}
-				}
-			}
-			tFinal1 = MPI_Wtime();
-			tCalc += tFinal1 - tInit1;  // Updating calculation time
-			// Send - Recieve block
-			/*MPI_Startall(nOfCores, reqsSU);
-			MPI_Startall(nOfCores, reqsRL);
-			MPI_Startall(nOfCores, reqsSL);
-			MPI_Startall(nOfCores, reqsRU);*/
-			//std::cout << "Before startall" << endl;
-			MPI_Startall(nOfReqsS, reqsS);
-			MPI_Startall(nOfReqsR, reqsR);
-			//std::cout << "Before startall" << endl;
-			MPI_Waitall(nOfReqsR, reqsR, statR);
-			MPI_Waitall(nOfReqsS, reqsS, statS);
-			double* tmpContainer = res;
-			res = BufLayer;
-			BufLayer = tmpContainer;
-		//}
-		if (s == 0 && rank == 0) {
-			//std::cout << "Res after send-recieves from rank " << rank << endl;
-			//printMatr(res, ps + 2, _cols);
 		}
-		// Odd iterations
-		//else {
-		//	tInit2 = MPI_Wtime();
-		//	if (rank == 0) {  // First part
-		//		for (int i = 1; i < ps; ++i) {
-		//			for (int j = 1; j < _cols - 1; ++j) {
-		//				BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
-		//					res[i * _cols + (j + 1)] + rPart[i * _cols + j]);
-		//			}
-		//		}
-		//	}
-		//	else if (rank == nOfCores - 1) {  // Last part
-		//		for (int i = 2; i < ps + 1; ++i) {
-		//			for (int j = 1; j < _cols - 1; ++j) {
-		//				BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
-		//					res[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
-		//			}
-		//		}
-		//	}
-		//	else {  // Other parts
-		//		for (int i = 1; i < ps + 1; ++i) {
-		//			for (int j = 1; j < _cols - 1; ++j) {
-		//				BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
-		//					res[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
-		//			}
-		//		}
-		//	}
-		//	tFinal2 = MPI_Wtime();
-		//	tCalc += tFinal2 - tInit2;  // Updating calculation time
-		//	// Send - Recieve block
-		//	MPI_Startall(nOfReqsS, reqsS);
-		//	MPI_Startall(nOfReqsR, reqsR);
-		//	//std::cout << "Before startall" << endl;
-		//	MPI_Waitall(nOfReqsR, reqsR, statR);
-		//	MPI_Waitall(nOfReqsS, reqsS, statS);
-		//}
+		else if (rank == nOfCores - 1) {  // Last part
+			for (int i = 2; i < ps + 1; ++i) {
+				for (int j = 1; j < _cols - 1; ++j) {
+					res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+						BufLayer[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
+				}
+			}
+		}
+		else {
+			for (int i = 1; i < ps + 1; ++i) {  // Other parts
+				for (int j = 1; j < _cols - 1; ++j) {
+					res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+						BufLayer[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
+				}
+			}
+		}
+		tFinal1 = MPI_Wtime();
+		tCalc += tFinal1 - tInit1;  // Updating calculation time
+		// Send - Recieve block
+		MPI_Startall(nOfReqsS, reqsS);
+		MPI_Startall(nOfReqsR, reqsR);
+		MPI_Waitall(nOfReqsR, reqsR, statR);
+		MPI_Waitall(nOfReqsS, reqsS, statS);
+		// Updating res
+		double* tmpContainer = res;
+		res = BufLayer;
+		BufLayer = tmpContainer;
 	}
 	// Constructing result
 	double* resBuf = NULL;
@@ -398,7 +321,7 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		std::cout << "Calculation time: " << tCalc << endl;
 	}
 	if (rank == 0) {
-		std::cout << "Writing to file" << endl;
+		std::cout << "Writing to file..." << endl;
 		ofstream file("C:\\Users\\ighos\\Documents\\Programming\\Univercity\\MPI_Examples\\fileJac.dat");
 		if (!file) {
 			std::cout << "Error while opening file" << endl;

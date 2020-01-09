@@ -70,6 +70,7 @@ int main(int argc, char* argv[]) {
 		
 		// Calculations block
 		tInit = MPI_Wtime();
+
 		// Jacobi
 		//Jacobi(mesh1, rows, cols, 150, step, nOfIters);
 		JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
@@ -79,12 +80,12 @@ int main(int argc, char* argv[]) {
 		//Zeidel(mesh1, rows, cols, 1, step, nOfIters);
 		//ZeidelParall(mesh1, rows, cols, 150, step, nOfIters, nproc);
 		//printMatr(mesh1, rows, cols);
+
 		tFinal = MPI_Wtime();
 		if (rank == 0) {
 			double deltaT = tFinal - tInit;
 			cout << "Total time: " << deltaT << endl;
 		}
-
 		// Cleanup
 		delete[] mesh1;
 		//system("pause");  // For sequental methods
