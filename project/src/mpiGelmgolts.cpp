@@ -191,8 +191,6 @@ void Zeidel(double* _mesh, int _rows, int _cols, double _k, double _step, int IT
 	delete[] rPart;
 }
 
-
-
 void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, int ITERAT, const int nOfCores) {
 	double* rPart = rightPart(_step, _rows, _cols, _k);
 	double c = 1. / (4. + _k * _k *_step*_step);
@@ -360,130 +358,129 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		BufLayer[i] = 0.;
 	}
 	double* previousLayer = copyMesh(_mesh, _rows, _cols);
+	// Requests buffers
+	MPI_Request* reqsS;
+	MPI_Request* reqsR;
+	if (rank == 0 || rank == nOfCores - 1) {
+		reqsS = new MPI_Request;
+		reqsR = new MPI_Request;
+	}
+	else {
+		reqsS = new MPI_Request[2];
+		reqsR = new MPI_Request[2];
+	}
+	int nOfReqsS = 0;
+	int nOfReqsR = 0;
+	// Initializing Send - Recieve instructions
+	if (rank == 0) {
+		// Lower lines
+		MPI_Send_init(BufLayer + (ps - 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
+		MPI_Recv_init(BufLayer + ps * _cols, _cols, MPI_DOUBLE, rank + 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
+		nOfReqsS++;
+		nOfReqsR++;
+	}
+	else if (rank < nOfCores - 1) {
+		// Upper lines
+		MPI_Send_init(BufLayer + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
+		MPI_Recv_init(BufLayer, _cols, MPI_DOUBLE, rank - 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
+		nOfReqsS++;
+		nOfReqsR++;
+
+		// Lower lines
+		MPI_Send_init(BufLayer + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
+		MPI_Recv_init(BufLayer + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
+		nOfReqsS++;
+		nOfReqsR++;
+	}
+	else {
+		// Upper lines
+		MPI_Send_init(BufLayer + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, reqsS + nOfReqsS);
+		MPI_Recv_init(BufLayer + _cols, _cols, MPI_DOUBLE, rank - 1, MPI_ANY_TAG, MPI_COMM_WORLD, reqsR + nOfReqsR);
+		nOfReqsS++;
+		nOfReqsR++;
+	}
+	MPI_Status* statS = new MPI_Status[2];
+	MPI_Status* statR = new MPI_Status[2];
 	for (int s = 0; s < ITERAT; ++s) {
 		// Even iterations
 		if (s % 2 == 0) {
 			tInit1 = MPI_Wtime();
 			if (rank == 0) {  // First part
 				for (int i = 1; i < ps; ++i) {
-					for (int j = 1; j < _cols - 1; j += 2) {
-						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+					for (int j = 2 - (i % 2); j < _cols - 1; j += 2) {
+						BufLayer[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 							BufLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 					}
 				}
 			}
 			else if (rank == nOfCores - 1) {  // Last part
 				for (int i = 2; i < ps + 1; ++i) {
-					for (int j = 1; j < _cols - 1; j += 2) {
-						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+					for (int j = 2 - ((i - (1 - ps % 2)) % 2); j < _cols - 1; j += 2) {
+						BufLayer[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 							BufLayer[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
 					}
 				}
 			}
 			else {
 				for (int i = 1; i < ps + 1; ++i) {  // Other parts
-					for (int j = 1; j < _cols - 1; j += 2) {
-						res[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+					for (int j = 2 - ((i - ps % 2) % 2); j < _cols - 1; j += 2) {
+						BufLayer[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
 							BufLayer[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
 					}
 				}
 			}
 			tFinal1 = MPI_Wtime();
 			tCalc += tFinal1 - tInit1;
-			BufLayer = res;
-			//BufLayer = copyMesh(res, ps + 2, _cols);
-			// Send-Recieve block
-			//MPI_Barrier(MPI_COMM_WORLD);
-			//if (rank == 0) {
-			//	MPI_Sendrecv(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
-			//}
-			//else if (rank == nOfCores - 1){
-			//	MPI_Sendrecv(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &stat);  // First row
-			//}
-			//else {
-			//	MPI_Sendrecv(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &stat);  // First row
-			//	MPI_Sendrecv(res + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
-
-			//}
-			if (rank == 0) {
-				MPI_Isend(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			else if (rank < nOfCores - 1){
-				MPI_Isend(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
-
-				MPI_Isend(res + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			else {
-				MPI_Isend(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			MPI_Barrier(MPI_COMM_WORLD);
 		}
 		// Odd iterations
 		else {
-			//MPI_Barrier(MPI_COMM_WORLD);
 			tInit2 = MPI_Wtime();
 			if (rank == 0) {  // First part
 				for (int i = 1; i < ps; ++i) {
-					for (int j = 2; j < _cols - 1; j += 2) {
-						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
-							res[i * _cols + (j + 1)] + rPart[i * _cols + j]);
+					for (int j = 2 - ((i - 1) % 2); j < _cols - 1; j += 2) {
+						BufLayer[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+							BufLayer[i * _cols + (j + 1)] + rPart[i * _cols + j]);
 					}
 				}
 			}
 			else if (rank == nOfCores - 1) {  // Last part
 				for (int i = 2; i < ps + 1; ++i) {
-					for (int j = 2; j < _cols - 1; j += 2) {
-						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
-							res[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
+					for (int j = 2 - (((i - 1) - (1 - ps % 2)) % 2); j < _cols - 1; j += 2) {
+						BufLayer[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+							BufLayer[i * _cols + (j + 1)] + rPart[((i - 2) + rank * ps) * _cols + j]);
 					}
 				}
 			}
 			else {
 				for (int i = 1; i < ps + 1; ++i) {  // Other parts
-					for (int j = 2; j < _cols - 1; j += 2) {
-						BufLayer[i * _cols + j] = c * (res[(i - 1) * _cols + j] + res[(i + 1) * _cols + j] + res[i * _cols + (j - 1)] + \
-							res[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
+					for (int j = 2 - (((i - 1) - ps % 2) % 2); j < _cols - 1; j += 2) {
+						BufLayer[i * _cols + j] = c * (BufLayer[(i - 1) * _cols + j] + BufLayer[(i + 1) * _cols + j] + BufLayer[i * _cols + (j - 1)] + \
+							BufLayer[i * _cols + (j + 1)] + rPart[((i - 1) + rank * ps) * _cols + j]);
 					}
 				}
 			}
 			tFinal2 = MPI_Wtime();
 			tCalc += tFinal2 - tInit2;
-			// Send-Recieve block
-			//MPI_Barrier(MPI_COMM_WORLD);
-			//if (rank == 0) {
-			//	MPI_Sendrecv(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
-			//}
-			//else if (rank == nOfCores - 1){
-			//	MPI_Sendrecv(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &stat);  // First row
-			//}
-			//else {
-			//	MPI_Sendrecv(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &stat);  // First row
-			//	MPI_Sendrecv(res + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
-			//}
-			if (rank == 0) {
-				MPI_Isend(BufLayer + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			else if (rank < nOfCores - 1) {
-				MPI_Isend(BufLayer + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(BufLayer, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
-				//MPI_Barrier(MPI_COMM_WORLD);
-				MPI_Isend(BufLayer + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(BufLayer + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			else {
-				MPI_Isend(BufLayer + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(BufLayer + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			MPI_Barrier(MPI_COMM_WORLD);
+			//BufLayer = res;
 		}
+		
+		// Send - Recieve block
+		MPI_Startall(nOfReqsS, reqsS);
+		MPI_Startall(nOfReqsR, reqsR);
+		MPI_Waitall(nOfReqsR, reqsR, statR);
+		MPI_Waitall(nOfReqsS, reqsS, statS);
+		/*if (s == 1 && rank == 1) {
+			cout << "Res from rank " << rank << endl;
+			printMatr(BufLayer, ps + 2, _cols);
+		}*/
+		//// Updating res
+		//if (s != 0 && s % 2 == 0) {
+		//	double* tmpContainer = res;
+		//	res = BufLayer;
+		//	BufLayer = tmpContainer;
+		//}
+		
 	}
-	//std::cout << "Test" << endl;
-	// Constructing result
 	double* resBuf = NULL;
 	if (rank == 0) {
 		resBuf = BufLayer;
@@ -508,7 +505,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		std::cout << "Calculation time: " << tCalc << endl;
 	}
 	if (rank == 0) {
-		std::cout << "Writing to file" << endl;
+		std::cout << "Writing to file..." << endl;
 		ofstream file("C:\\Users\\ighos\\Documents\\Programming\\Univercity\\MPI_Examples\\fileZeid.dat");
 		if (!file) {
 			std::cout << "Error while opening file" << endl;
