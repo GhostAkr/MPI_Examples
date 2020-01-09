@@ -1,7 +1,9 @@
 #ifndef MPIGELMGOLTS_H
 #define MPIGELMGOLTS_H
 
-#define Pi 3.14
+#include <cmath>
+#define Pi 3.14159265358979323846264338327950288419716939937510582
+//#define Pi 3.14
 #include "mpi.h"
 #include <iostream>
 #include <fstream>
@@ -19,6 +21,7 @@ void zeroLayer(double* _mesh, int _rows, int _cols);
 double* createMesh(double _xBorder, double _yBorder, double _step, double* _rows, double* _cols);  // Step must be valid
 double* createMeshFromNodes(double _xBorder, double _yBorder, double* _step, double* _rows, double* _cols, int _nOfNodes);
 double* createMatrLineGelm(int _rows, int _cols);
+double error(double* _result, int _rows, int _cols, double _step);
 
 // Boundaries
 

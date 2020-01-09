@@ -54,10 +54,12 @@ double* copyMesh(double* _mesh, int _rows, int _cols) {
 }
 
 bool checkResult(double* _result, int _rows, int _cols, double _step) {
+	cout << "Step while checking = " << _step << endl;
 	double epsNull = 1e-4;
 	for (int i = 0; i < _rows; ++i) {
 		for (int j = 0; j < _cols; ++j) {
 			if (fabs(_result[i * _cols + j] - exactSolution(i * _step, j * _step)) > epsNull) {
+				cout << "j * step = " << j * _step << endl;
 				cout << "Result[" << i << "][" << j << "] = " << _result[i * _cols + j] << "; Exact = " << exactSolution(i * _step, j * _step) << endl;
 				return false;
 			}
@@ -215,6 +217,46 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		BufLayer[i] = 0.;
 	}
 	double* previousLayer = copyMesh(_mesh, _rows, _cols);
+	MPI_Request* reqsS = new MPI_Request[nOfCores];
+	for (int i = 0; i < nOfCores; ++i) {
+		reqsS[i] = MPI_REQUEST_NULL;
+	}
+	MPI_Request* reqsR = new MPI_Request[nOfCores];
+	for (int i = 0; i < nOfCores; ++i) {
+		reqsR[i] = MPI_REQUEST_NULL;
+	}
+	MPI_Request req1 = MPI_REQUEST_NULL;
+	MPI_Request req2 = MPI_REQUEST_NULL;
+	MPI_Request req3 = MPI_REQUEST_NULL;
+	MPI_Request req4 = MPI_REQUEST_NULL;
+	if (rank == 0) {
+		MPI_Send_init(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &req1);
+		MPI_Recv_init(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &req2);
+
+	}
+	else {
+		MPI_Send_init(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &req3);
+		MPI_Recv_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &req4);
+	}
+	/*MPI_Request reqsS [2];
+	MPI_Request reqsR [2];*/
+	//if (rank == 0) {
+	//	MPI_Send_init(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
+	//	MPI_Recv_init(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
+	//}
+	//else if (rank < nOfCores - 1) {
+	//	MPI_Send_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
+	//	MPI_Recv_init(res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
+
+	//	MPI_Send_init(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
+	//	MPI_Recv_init(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
+	//}
+	//else {
+	//	MPI_Send_init(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsS[rank]);
+	//	MPI_Recv_init(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &reqsR[rank]);
+	//}
+
+	//cout << "Test" << endl;
 	for (int s = 0; s < ITERAT; ++s) {
 		// Even iterations
 		if (s % 2 == 0) {
@@ -247,7 +289,7 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			tCalc += tFinal1 - tInit1;
 			// Send-Recieve block
 			//MPI_Barrier(MPI_COMM_WORLD);
-			//if (rank == 0) {
+			//if (rank == 06) {
 			//	MPI_Sendrecv(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
 			//}
 			//else if (rank == nOfCores - 1){
@@ -258,25 +300,106 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			//	MPI_Sendrecv(res + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
 			//}
 			//MPI_Barrier(MPI_COMM_WORLD);
-			if (rank == 0 && s == 0) {
-				//printMatr(res, ps + 2, _cols);
-			}
+			//MPI_Startall(nOfCores, reqs);
+			//MPI_Start(&reqs[rank]);
+			/*MPI_Start(&reqs[rank]);
+			MPI_Wait(&reqs[rank], &stat);*/
 			if (rank == 0) {
-				MPI_Isend(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &ireq);
-			}
-			else if (rank < nOfCores - 1) {
-				MPI_Isend(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
+				cout << "000" << endl;
+				MPI_Start(&req1);
+				//MPI_Wait(&req2, &stat);
+				//MPI_Start(&req2);
 
-				MPI_Isend(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &ireq);
 			}
 			else {
-				MPI_Isend(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
-				MPI_Irecv(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
+				cout << "111" << endl;
+				MPI_Start(&req2);
+				//MPI_Wait(&req1, &stat);
+				//MPI_Start(&req1);
 			}
-			MPI_Barrier(MPI_COMM_WORLD);
+			if (rank == 0){
+				MPI_Request_free(&req1);
+				MPI_Request_free(&req2);
+				//MPI_Request_free(&req3);
+				//MPI_Request_free(&req4);
+			}
+			if (rank == 1){
+				//MPI_Request_free(&req1);
+				//MPI_Request_free(&req2);
+				MPI_Request_free(&req3);
+				MPI_Request_free(&req4);
+			}
+			//if (rank == 0 && s == 0) {
+			//	cout << "Before" << &reqsS[0] << endl;
+			//}
+			//cout << "Test2" << endl;
+			//if (rank == 0) {
+			//	MPI_Start(&reqsS[rank]);
+			//	cout << "req0 = " << &reqsS[rank + 1] << endl;
+			//	MPI_Wait(&reqsS[rank + 1], &stat);
+			//	MPI_Start(&reqsR[rank]);
+			//	for (int i = 0; i < nOfCores; ++i) {
+			//		//reqsS[i] = MPI_REQUEST_NULL;
+			//		//reqsR[i] = MPI_REQUEST_NULL;
+			//		//MPI_Request_free(&reqsS[i]);
+			//		//MPI_Request_free(&reqsR[i]);
+			//	}
+			//}
+			//else if (rank < nOfCores - 1) {
+			//	MPI_Start(&reqsS[rank]);
+			//	MPI_Wait(&reqsS[rank - 1], &stat);
+			//	MPI_Start(&reqsR[rank]);
+
+			//	MPI_Start(&reqsS[rank]);
+			//	MPI_Wait(&reqsS[rank + 1], &stat);
+			//	MPI_Start(&reqsR[rank]);
+			//	for (int i = 0; i < nOfCores; ++i) {
+			//		//reqsS[i] = MPI_REQUEST_NULL;
+			//		//reqsR[i] = MPI_REQUEST_NULL;
+			//		//MPI_Request_free(&reqsS[i]);
+			//		//MPI_Request_free(&reqsR[i]);
+			//	}
+			//}
+			//else {
+			//	MPI_Start(&reqsS[rank]);
+			//	cout << "req1 = " << &reqsS[rank + 1] << endl;
+			//	MPI_Wait(&reqsS[rank - 1], &stat);
+			//	MPI_Start(&reqsR[rank]);
+			//	for (int i = 0; i < nOfCores; ++i) {
+			//		//reqsS[i] = MPI_REQUEST_NULL;
+			//		//reqsR[i] = MPI_REQUEST_NULL;
+			//		//MPI_Request_free(&reqsS[i]);
+			//		//MPI_Request_free(&reqsR[i]);
+			//	}
+			//}
+			//if (rank == 0 && s == 0) {
+			//	cout << "After" << &reqsS[0] << endl;
+			//}
+
+
+
+
+			//MPI_Barrier(MPI_COMM_WORLD);
+			//if (rank == 0 && s == 0) {
+			//	//printMatr(res, ps + 2, _cols);
+			//}
+
+			//if (rank == 0) {
+			//	MPI_Isend(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &sendreq);
+			//	MPI_Irecv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &ireq);
+			//}
+			//else if (rank < nOfCores - 1) {
+			//	MPI_Isend(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
+			//	MPI_Irecv(res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
+
+			//	MPI_Isend(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
+			//	MPI_Irecv(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &ireq);
+			//}
+			//else {
+			//	MPI_Isend(res + 2 * _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
+			//	MPI_Irecv(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
+			//}
+			//MPI_Barrier(MPI_COMM_WORLD);
 		}
 		// Odd iterations
 		else {
@@ -360,6 +483,7 @@ void JacobiParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		else {
 			cout << "Answer is INcorrect" << endl;
 		}
+		cout << "Error = " << error(previousLayer, _rows, _cols, _step) << endl;
 		cout << "Calculation time: " << tCalc << endl;
 	}
 	if (rank == 0) {
@@ -447,16 +571,15 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			//	MPI_Sendrecv(res + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
 
 			//}
-			//MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0) {
 				MPI_Isend(res + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &sendreq);
 				MPI_Irecv(res + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &ireq);
 			}
-			else if (rank < nOfCores - 1) {
+			else if (rank < nOfCores - 1){
 				MPI_Isend(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
 				MPI_Irecv(res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
 
-				MPI_Isend(res + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
+				MPI_Isend(res + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
 				MPI_Irecv(res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &ireq);
 			}
 			else {
@@ -467,7 +590,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		}
 		// Odd iterations
 		else {
-			MPI_Barrier(MPI_COMM_WORLD);
+			//MPI_Barrier(MPI_COMM_WORLD);
 			tInit2 = MPI_Wtime();
 			if (rank == 0) {  // First part
 				for (int i = 1; i < ps; ++i) {
@@ -507,7 +630,6 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 			//	MPI_Sendrecv(res + _cols, _cols, MPI_DOUBLE, rank - 1, 42, res, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &stat);  // First row
 			//	MPI_Sendrecv(res + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, res + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &stat);  // Last row
 			//}
-			//MPI_Barrier(MPI_COMM_WORLD);
 			if (rank == 0) {
 				MPI_Isend(BufLayer + (ps - 1) *_cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &sendreq);
 				MPI_Irecv(BufLayer + ps * _cols, _cols, MPI_DOUBLE, 1, 42, MPI_COMM_WORLD, &ireq);
@@ -516,7 +638,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 				MPI_Isend(BufLayer + _cols, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &sendreq);
 				MPI_Irecv(BufLayer, _cols, MPI_DOUBLE, rank - 1, 42, MPI_COMM_WORLD, &ireq);
 				//MPI_Barrier(MPI_COMM_WORLD);
-				MPI_Isend(BufLayer + ps * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
+				MPI_Isend(BufLayer + ps *_cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &sendreq);
 				MPI_Irecv(BufLayer + (ps + 1) * _cols, _cols, MPI_DOUBLE, rank + 1, 42, MPI_COMM_WORLD, &ireq);
 			}
 			else {
@@ -548,6 +670,7 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 		else {
 			cout << "Answer is INcorrect" << endl;
 		}
+		cout << "Error = " << error(previousLayer, _rows, _cols, _step) << endl;
 		cout << "Calculation time: " << tCalc << endl;
 	}
 	if (rank == 0) {
@@ -566,4 +689,17 @@ void ZeidelParall(double* _mesh, int _rows, int _cols, double _k, double _step, 
 	}
 	delete[] previousLayer;
 	delete[] rPart;
+}
+
+double error(double* _result, int _rows, int _cols, double _step) {
+	double max = 0.;
+	for (int i = 0; i < _rows; ++i) {
+		for (int j = 0; j < _cols; ++j) {
+			double diff = fabs(_result[i * _cols + j] - exactSolution(i * _step, j * _step));
+			if (diff > max) {
+				max = diff;
+			}
+		}
+	}
+	return max;
 }

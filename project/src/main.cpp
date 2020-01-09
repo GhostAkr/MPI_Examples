@@ -58,27 +58,31 @@ int main(int argc, char* argv[]) {
 		double rows = 0.0;
 		double cols = 0.0;
 		double step = 0.1;
-		int nOfNodes = 200;
+		int nOfNodes = 212;
 		double* mesh1 = NULL;
 		//double* mesh2 = NULL;
 		double t1 = 0.0, t2 = 0.0;
-		int nOfIters = 60000;
+		int nOfIters = 20000;
 
 		// Assigning block
 		//mesh1 = createMesh(1, 1, step, &rows, &cols);
 		mesh1 = createMeshFromNodes(1, 1, &step, &rows, &cols, nOfNodes);
+		/*cout << "Current step = " << step << endl;
+		cout << "Border = " << step * 11 << endl;
+		cout << "Cols = " << cols << endl;
+		cout << "Rows = " << rows << endl;*/
 
 		// Calculations block
 
 		tInit = MPI_Wtime();
 		// Jacobi
 		//Jacobi(mesh1, rows, cols, 150, step, nOfIters);
-		//JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
+		JacobiParall(mesh1, rows, cols, 150, step, nOfIters,nproc);
 		//printMatr(mesh1, rows, cols);
 
 		// Zeidel
 		//Zeidel(mesh1, rows, cols, 1, step, nOfIters);
-		ZeidelParall(mesh1, rows, cols, 150, step, nOfIters, nproc);
+		//ZeidelParall(mesh1, rows, cols, 150, step, nOfIters, nproc);
 		//printMatr(mesh1, rows, cols);
 		tFinal = MPI_Wtime();
 		if (rank == 0) {
